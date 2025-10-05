@@ -2,19 +2,22 @@
 agp = "8.12.3"
 kotlin = "2.0.21"
 ksp = "2.0.21-1.0.25"
+
 core-ktx = "1.13.1"
 lifecycle-runtime-ktx = "2.8.6"
 activity-compose = "1.9.2"
 compose-bom = "2024.09.00"
+
 coroutines = "1.10.2"
-room = "2.6.1"
 hilt = "2.51.1"
+room = "2.6.1"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
 navigation = "2.8.3"
 datastore = "1.1.1"
 paging = "3.3.2"
 coil = "2.6.0"
+
 junit = "4.13.2"
 androidx-junit = "1.2.1"
 espresso = "3.6.1"
@@ -36,12 +39,14 @@ androidx-material3 = { module = "androidx.compose.material3:material3" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-test    = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test",    version.ref = "coroutines" }
 
+# Room (KSP)
 room-runtime  = { module = "androidx.room:room-runtime",  version.ref = "room" }
 room-ktx      = { module = "androidx.room:room-ktx",      version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
-hilt-android  = { module = "com.google.dagger:hilt-android",  version.ref = "hilt" }
-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+# Hilt (KAPT)  ✅ artefacto correcto
+hilt-android  = { module = "com.google.dagger:hilt-android",           version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-android-compiler",  version.ref = "hilt" }
 
 retrofit-core   = { module = "com.squareup.retrofit2:retrofit",        version.ref = "retrofit" }
 retrofit-moshi  = { module = "com.squareup.retrofit2:converter-moshi", version.ref = "retrofit" }
@@ -62,6 +67,10 @@ androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", vers
 android-application = { id = "com.android.application",             version.ref = "agp" }
 kotlin-android      = { id = "org.jetbrains.kotlin.android",        version.ref = "kotlin" }
 kotlin-compose      = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-kotlin-kapt         = { id = "org.jetbrains.kotlin.kapt",           version.ref = "kotlin" }
-ksp                 = { id = "com.google.devtools.ksp",             version.ref = "ksp" }
+
+# Procesadores
+kotlin-kapt         = { id = "org.jetbrains.kotlin.kapt",           version.ref = "kotlin" }  # Hilt
+ksp                 = { id = "com.google.devtools.ksp",             version.ref = "ksp" }     # Room
 hilt                = { id = "com.google.dagger.hilt.android",      version.ref = "hilt" }
+
+
