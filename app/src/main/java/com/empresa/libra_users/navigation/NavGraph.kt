@@ -1,8 +1,6 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.empresa.libra_users.navigation
-
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -12,7 +10,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,37 +25,40 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.launch
+
+// Pantallas
 import com.empresa.libra_users.screen.HomeScreen
 import com.empresa.libra_users.screen.LoginScreen
 import com.empresa.libra_users.screen.RegisterScreen
+
+// Drawer / items
 import com.empresa.libra_users.ui.theme.components.AppDrawer
 import com.empresa.libra_users.ui.theme.components.buildDefaultNavDrawerItems
-import kotlinx.coroutines.launch
+
+// >>> IMPORTA TU VM CORRECTO <<<
+import com.empresa.libra_users.viewmodel.MainViewModel
 
 @Composable
-fun AppNavGraph(navController: NavHostController) {
+fun AppNavGraph(
+    navController: NavHostController,
+    mainViewModel: MainViewModel   // <-- ahora recibimos MainViewModel
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val routeNow = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    val goHome: () -> Unit = {
-        navController.navigate(Route.Home.path) {
-            launchSingleTop = true; restoreState = true
+    // Navegación con conservación de estado
+    val navigateSingleTop: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            launchSingleTop = true
+            restoreState = true
             popUpTo(navController.graph.startDestinationId) { saveState = true }
         }
     }
-    val goLogin: () -> Unit = {
-        navController.navigate(Route.Login.path) {
-            launchSingleTop = true; restoreState = true
-            popUpTo(navController.graph.startDestinationId) { saveState = true }
-        }
-    }
-    val goRegister: () -> Unit = {
-        navController.navigate(Route.Register.path) {
-            launchSingleTop = true; restoreState = true
-            popUpTo(navController.graph.startDestinationId) { saveState = true }
-        }
-    }
+    val goHome     = { navigateSingleTop(Route.Home.path) }
+    val goLogin    = { navigateSingleTop(Route.Login.path) }
+    val goRegister = { navigateSingleTop(Route.Register.path) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -75,7 +75,7 @@ fun AppNavGraph(navController: NavHostController) {
     ) {
         Scaffold(
             topBar = {
-                val active = MaterialTheme.colorScheme.primary
+                val active   = MaterialTheme.colorScheme.primary
                 val inactive = MaterialTheme.colorScheme.onSurfaceVariant
                 CenterAlignedTopAppBar(
                     title = { Text("Libra Users") },
@@ -86,16 +86,25 @@ fun AppNavGraph(navController: NavHostController) {
                     },
                     actions = {
                         IconButton(onClick = goHome) {
-                            Icon(Icons.Filled.Home, "Home",
-                                tint = if (routeNow == Route.Home.path) active else inactive)
+                            Icon(
+                                imageVector = Icons.Filled.Home,
+                                contentDescription = "Home",
+                                tint = if (routeNow == Route.Home.path) active else inactive
+                            )
                         }
                         IconButton(onClick = goLogin) {
-                            Icon(Icons.AutoMirrored.Filled.Login, "Login",
-                                tint = if (routeNow == Route.Login.path) active else inactive)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Login,
+                                contentDescription = "Login",
+                                tint = if (routeNow == Route.Login.path) active else inactive
+                            )
                         }
                         IconButton(onClick = goRegister) {
-                            Icon(Icons.Filled.PersonAdd, "Registro",
-                                tint = if (routeNow == Route.Register.path) active else inactive)
+                            Icon(
+                                imageVector = Icons.Filled.PersonAdd,
+                                contentDescription = "Registro",
+                                tint = if (routeNow == Route.Register.path) active else inactive
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
@@ -107,9 +116,28 @@ fun AppNavGraph(navController: NavHostController) {
                 startDestination = Route.Home.path,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(Route.Home.path) { HomeScreen(onGoLogin = goLogin, onGoRegister = goRegister) }
-                composable(Route.Login.path) { LoginScreen(onLoginOkNavigateHome = goHome, onGoRegister = goRegister) }
-                composable(Route.Register.path) { RegisterScreen(onRegisteredNavigateLogin = goLogin, onGoLogin = goLogin) }
+                composable(Route.Home.path) {
+                    HomeScreen(
+                        onGoLogin = goLogin,
+                        onGoRegister = goRegister
+                    )
+                }
+                composable(Route.Login.path) {
+                    // Pasamos el VM principal a Login
+                    LoginScreen(
+                        onLoginOkNavigateHome = goHome,
+                        onGoRegister = goRegister,
+                        vm = mainViewModel
+                    )
+                }
+                composable(Route.Register.path) {
+                    // Y también a Register (si tu composable lo acepta)
+                    RegisterScreen(
+                        onRegisteredNavigateLogin = goLogin,
+                        onGoLogin = goLogin,
+                        vm = mainViewModel
+                    )
+                }
             }
         }
     }

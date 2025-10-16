@@ -33,6 +33,26 @@ class UserRepository(
             return Result.success(id)
         }
     }
+
+    // Update User (cambiar contraseña o algún detalle)
+    suspend fun updateUser(user: UserEntity): Result<Boolean> {
+        val existingUser = userDao.getById(user.id)
+        return if (existingUser != null) {
+            userDao.update(user)  // Actualiza el usuario con los nuevos datos
+            Result.success(true)
+        } else {
+            Result.failure(IllegalArgumentException("Usuario no encontrado"))
+        }
+    }
+
+    // Delete User (eliminar un usuario)
+    suspend fun deleteUser(user: UserEntity): Result<Boolean> {
+        val existingUser = userDao.getById(user.id)
+        return if (existingUser != null) {
+            userDao.delete(user)  // Elimina el usuario de la base de datos
+            Result.success(true)
+        } else {
+            Result.failure(IllegalArgumentException("Usuario no encontrado"))
+        }
+    }
 }
-
-

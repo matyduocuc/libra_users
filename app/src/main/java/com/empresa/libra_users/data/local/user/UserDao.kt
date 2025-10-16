@@ -4,19 +4,36 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
+import androidx.room.Delete
 
 @Dao
 interface UserDao {
-    //definir las operaciones que se pueden realizar sobre esta entidad
+    // Insertar un usuario
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(user: UserEntity): Long
 
+    // Obtener un usuario por email (para login)
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getByEmail(email: String): UserEntity?
 
+    // Contar el número de usuarios en la tabla
     @Query("SELECT COUNT(*) FROM users")
     suspend fun count(): Int
 
+    // Obtener todos los usuarios
     @Query("SELECT * FROM users ORDER BY id ASC")
     suspend fun getAll(): List<UserEntity>
+
+    // Obtener un usuario por su ID
+    @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): UserEntity?
+
+    // Actualizar un usuario
+    @Update
+    suspend fun update(user: UserEntity)
+
+    // Eliminar un usuario
+    @Delete
+    suspend fun delete(user: UserEntity)
 }

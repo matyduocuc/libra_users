@@ -10,35 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.empresa.libra_users.ui.state.LoginUiState
+import com.empresa.libra_users.ui.state.RegisterUiState
+
 
 // ESTADOS DE UI (sin cambios)
-data class LoginUiState(
-    val email: String = "",
-    val pass: String = "",
-    val emailError: String? = null,
-    val passError: String? = null,
-    val isSubmitting: Boolean = false,
-    val canSubmit: Boolean = false,
-    val success: Boolean = false,
-    val errorMsg: String? = null
-)
-
-data class RegisterUiState(
-    val name: String = "",
-    val email: String = "",
-    val phone: String = "",
-    val pass: String = "",
-    val confirm: String = "",
-    val nameError: String? = null,
-    val emailError: String? = null,
-    val phoneError: String? = null,
-    val passError: String? = null,
-    val confirmError: String? = null,
-    val isSubmitting: Boolean = false,
-    val canSubmit: Boolean = false,
-    val success: Boolean = false,
-    val errorMsg: String? = null
-)
 
 // ANOTACIÓN PARA QUE HILT PUEDA CREAR ESTE VIEWMODEL
 @HiltViewModel

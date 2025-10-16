@@ -2,6 +2,7 @@ package com.empresa.libra_users.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -10,21 +11,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.empresa.libra_users.data.repository.AuthViewModel
-import com.empresa.libra_users.data.repository.LoginUiState
-import androidx.compose.foundation.text.KeyboardOptions
+import com.empresa.libra_users.viewmodel.MainViewModel
+import com.empresa.libra_users.viewmodel.LoginUiState
 
 @Composable
 fun LoginScreen(
     onLoginOkNavigateHome: () -> Unit,
     onGoRegister: () -> Unit,
-    vm: AuthViewModel = hiltViewModel()
+    vm: MainViewModel            // ← AHORA llega por parámetro, sin Hilt
 ) {
-    // ⬇️ CORREGIDO: usar vm.login (StateFlow<LoginUiState>)
     val state: LoginUiState by vm.login.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.success) {
@@ -65,7 +65,11 @@ private fun LoginContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Bienvenido", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Bienvenido",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
             Spacer(Modifier.height(8.dp))
             Text("Inicia sesión para continuar", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(32.dp))
@@ -112,9 +116,13 @@ private fun LoginContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (state.isSubmitting) {
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text("Validando...")
+                    Text("Validando…")
                 } else {
                     Text("Entrar")
                 }
