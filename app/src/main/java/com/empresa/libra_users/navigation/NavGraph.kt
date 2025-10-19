@@ -36,23 +36,24 @@ import com.empresa.libra_users.screen.RegisterScreen
 import com.empresa.libra_users.ui.theme.components.AppDrawer
 import com.empresa.libra_users.ui.theme.components.buildDefaultNavDrawerItems
 
-// >>> IMPORTA TU VM CORRECTO <<<
+// ViewModel
 import com.empresa.libra_users.viewmodel.MainViewModel
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    mainViewModel: MainViewModel   // <-- ahora recibimos MainViewModel
+    mainViewModel: MainViewModel   // <-- Recibimos el ViewModel
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val routeNow = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    // Navegación con conservación de estado
+    // Lógica para navegación SingleTop
     val navigateSingleTop: (String) -> Unit = { route ->
         navController.navigate(route) {
             launchSingleTop = true
             restoreState = true
+            // PopUpTo al inicio para evitar múltiples pilas, pero guarda el estado para volver.
             popUpTo(navController.graph.startDestinationId) { saveState = true }
         }
     }
@@ -111,6 +112,7 @@ fun AppNavGraph(
                 )
             }
         ) { innerPadding ->
+            // EL NAVHOST PRINCIPAL Y ÚNICO
             NavHost(
                 navController = navController,
                 startDestination = Route.Home.path,
@@ -118,26 +120,26 @@ fun AppNavGraph(
             ) {
                 composable(Route.Home.path) {
                     HomeScreen(
+                        vm = mainViewModel, // <-- CORREGIDO: Se pasa el VM
                         onGoLogin = goLogin,
                         onGoRegister = goRegister
                     )
                 }
                 composable(Route.Login.path) {
-                    // Pasamos el VM principal a Login
                     LoginScreen(
+                        vm = mainViewModel, // <-- CORREGIDO: Se pasa el VM
                         onLoginOkNavigateHome = goHome,
-                        onGoRegister = goRegister,
-                        vm = mainViewModel
+                        onGoRegister = goRegister
                     )
                 }
                 composable(Route.Register.path) {
-                    // Y también a Register (si tu composable lo acepta)
                     RegisterScreen(
+                        vm = mainViewModel, // <-- CORREGIDO: Se pasa el VM
                         onRegisteredNavigateLogin = goLogin,
-                        onGoLogin = goLogin,
-                        vm = mainViewModel
+                        onGoLogin = goLogin
                     )
                 }
+                // Aquí irían las rutas adicionales (ej. libros, perfil)
             }
         }
     }

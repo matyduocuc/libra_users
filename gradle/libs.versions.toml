@@ -73,4 +73,3 @@ kotlin-kapt         = { id = "org.jetbrains.kotlin.kapt",           version.ref 
 ksp                 = { id = "com.google.devtools.ksp",             version.ref = "ksp" }     # Room
 hilt                = { id = "com.google.dagger.hilt.android",      version.ref = "hilt" }
 
-

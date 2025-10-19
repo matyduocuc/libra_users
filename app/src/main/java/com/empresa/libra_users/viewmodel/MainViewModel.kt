@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 // -----------------------------
 // ESTADOS DE PANTALLA
@@ -45,17 +46,24 @@ data class RegisterUiState(
     val errorMsg: String? = null
 )
 
-data class BookUiState(
-    val books: List<BookEntity> = emptyList(),
+data class HomeUiState(
+    val currentCoverIndex: Int = 0,
+    val coverImages: List<String> = listOf("https://ejemplo.com/cover1.jpg", "https://ejemplo.com/cover2.jpg", "https://ejemplo.com/cover3.jpg"),
+    val featuredBooks: List<BookEntity> = emptyList(),
+    val categorizedBooks: Map<String, List<BookEntity>> = emptyMap(),
     val isLoading: Boolean = false,
     val errorMsg: String? = null
 )
 
-data class LoanUiState(
-    val loans: List<LoanEntity> = emptyList(),
+// AÑADIDO: ESTADO PARA LA PANTALLA DE BÚSQUEDA
+data class SearchUiState(
+    val query: String = "",
+    val results: List<BookEntity> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMsg: String? = null
+    val errorMsg: String? = null,
+    val initialSearchPerformed: Boolean = false
 )
+
 
 // -----------------------------
 // VIEWMODEL PRINCIPAL
@@ -65,7 +73,7 @@ class MainViewModel(
     private val userRepository: UserRepository,
     private val bookRepository: BookRepository,
     private val loanRepository: LoanRepository,
-    notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     // Estados de UI
@@ -75,17 +83,76 @@ class MainViewModel(
     private val _register = MutableStateFlow(RegisterUiState())
     val register: StateFlow<RegisterUiState> = _register
 
-    private val _books = MutableStateFlow(BookUiState())
-    val books: StateFlow<BookUiState> = _books
+    private val _home = MutableStateFlow(HomeUiState())
+    val home: StateFlow<HomeUiState> = _home
 
-    private val _loans = MutableStateFlow(LoanUiState())
-    val loans: StateFlow<LoanUiState> = _loans
+    // AÑADIDO: StateFlow para la búsqueda
+    private val _search = MutableStateFlow(SearchUiState())
+    val search: StateFlow<SearchUiState> = _search
+
+    // --- Inicialización y Lógica de Home ---
+    init {
+        startCoverRotation()
+        loadCategorizedBooks()
+    }
+
+    private fun startCoverRotation() {
+        viewModelScope.launch {
+            while(true) {
+                delay(5000)
+                _home.update {
+                    it.copy(currentCoverIndex = (it.currentCoverIndex + 1) % it.coverImages.size)
+                }
+            }
+        }
+    }
+
+    fun loadCategorizedBooks() {
+        viewModelScope.launch {
+            _home.update { it.copy(isLoading = true, errorMsg = null) }
+            try {
+                val categorized = bookRepository.getCategorizedBooks()
+                _home.update {
+                    it.copy(
+                        isLoading = false,
+                        categorizedBooks = categorized,
+                        featuredBooks = categorized.values.flatten().distinct().take(6)
+                    )
+                }
+            } catch (e: Exception) {
+                _home.update { it.copy(isLoading = false, errorMsg = "Error al cargar categorías: ${e.message}") }
+            }
+        }
+    }
+
+    // --- Lógica de Búsqueda ---
+
+    fun onSearchQueryChange(newQuery: String) {
+        _search.update { it.copy(query = newQuery) }
+    }
+
+    fun performSearch() {
+        val currentQuery = _search.value.query.trim()
+        if (currentQuery.isBlank()) return
+
+        viewModelScope.launch {
+            _search.update { it.copy(isLoading = true, errorMsg = null, initialSearchPerformed = true) }
+            try {
+                val searchResults = bookRepository.searchBooks(currentQuery) // Llama al nuevo método del Repositorio
+                _search.update { it.copy(isLoading = false, results = searchResults) }
+            } catch (e: Exception) {
+                _search.update { it.copy(isLoading = false, errorMsg = "Error al buscar: ${e.message}") }
+            }
+        }
+    }
+
 
     // -----------------------------
-    // LOGIN / REGISTER
+    // LÓGICA DE AUTENTICACIÓN (LOGIN) - Mantenida
     // -----------------------------
+
     fun onLoginEmailChange(value: String) {
-        _login.update { it.copy(email = value, emailError = if (value.contains("@")) null else "Correo inválido") }
+        _login.update { it.copy(email = value, emailError = if (value.contains("@") && value.isNotBlank()) null else "Correo inválido") }
         recomputeLoginCanSubmit()
     }
 
@@ -103,10 +170,8 @@ class MainViewModel(
     fun submitLogin() {
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
-
         viewModelScope.launch {
             _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
-
             val result = userRepository.login(s.email.trim(), s.pass)
             _login.update {
                 if (result.isSuccess) it.copy(isSubmitting = false, success = true)
@@ -119,45 +184,54 @@ class MainViewModel(
         _login.update { it.copy(success = false, errorMsg = null) }
     }
 
-    // REGISTRO
+
+    // -----------------------------
+    // LÓGICA DE AUTENTICACIÓN (REGISTER) - Mantenida
+    // -----------------------------
+
     fun onRegisterNameChange(value: String) {
-        val filtered = value.filter { it.isLetter() || it.isWhitespace() }
-        _register.update { it.copy(name = filtered, nameError = if (filtered.length < 3) "Nombre demasiado corto" else null) }
+        val error = if (value.isBlank()) "El nombre es obligatorio" else null
+        _register.update { it.copy(name = value, nameError = error) }
         recomputeRegisterCanSubmit()
     }
 
     fun onRegisterEmailChange(value: String) {
-        _register.update { it.copy(email = value, emailError = if (value.contains("@")) null else "Correo inválido") }
+        val error = if (value.contains("@") && value.isNotBlank()) null else "Formato de correo inválido"
+        _register.update { it.copy(email = value, emailError = error) }
         recomputeRegisterCanSubmit()
     }
 
     fun onRegisterPhoneChange(value: String) {
-        val digits = value.filter { it.isDigit() }
-        _register.update { it.copy(phone = digits, phoneError = if (digits.length < 8) "Teléfono inválido" else null) }
+        val error = if (value.isNotBlank() && value.all { it.isDigit() }) null else "Solo se permiten dígitos"
+        _register.update { it.copy(phone = value, phoneError = error) }
         recomputeRegisterCanSubmit()
     }
 
     fun onRegisterPassChange(value: String) {
-        _register.update { it.copy(pass = value, passError = if (value.length < 6) "Contraseña muy corta" else null) }
+        val error = if (value.length >= 8) null else "Mínimo 8 caracteres"
+        val confirmError = if (value != _register.value.confirm) "Las contraseñas no coinciden" else null
+        _register.update { it.copy(pass = value, passError = error, confirmError = confirmError) }
         recomputeRegisterCanSubmit()
     }
 
     fun onRegisterConfirmChange(value: String) {
-        _register.update { it.copy(confirm = value, confirmError = if (value != _register.value.pass) "No coincide" else null) }
+        val pass = _register.value.pass
+        val error = if (value == pass) null else "Las contraseñas no coinciden"
+        _register.update { it.copy(confirm = value, confirmError = error) }
         recomputeRegisterCanSubmit()
     }
 
     private fun recomputeRegisterCanSubmit() {
         val s = _register.value
-        val noErrors = listOf(s.nameError, s.emailError, s.phoneError, s.passError, s.confirmError).all { it == null }
-        val filled = listOf(s.name, s.email, s.phone, s.pass, s.confirm).all { it.isNotBlank() }
-        _register.update { it.copy(canSubmit = noErrors && filled) }
+        val allFieldsValid = s.name.isNotBlank() && s.email.isNotBlank() && s.phone.isNotBlank() && s.pass.isNotBlank() && s.confirm.isNotBlank()
+        val noErrors = s.nameError == null && s.emailError == null && s.phoneError == null && s.passError == null && s.confirmError == null
+
+        _register.update { it.copy(canSubmit = allFieldsValid && noErrors) }
     }
 
     fun submitRegister() {
         val s = _register.value
         if (!s.canSubmit || s.isSubmitting) return
-
         viewModelScope.launch {
             _register.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
             val result = userRepository.register(s.name.trim(), s.email.trim(), s.phone.trim(), s.pass)
@@ -173,56 +247,33 @@ class MainViewModel(
     }
 
     // -----------------------------
-    // LIBROS
+    // LÓGICA DE NEGOCIO AVANZADA: PRÉSTAMO - Mantenida
     // -----------------------------
-    fun loadBooks() {
-        viewModelScope.launch {
-            _books.update { it.copy(isLoading = true) }
-            try {
-                val data = bookRepository.getAllBooks()
-                _books.update { it.copy(isLoading = false, books = data) }
-            } catch (e: Exception) {
-                _books.update { it.copy(isLoading = false, errorMsg = e.message) }
-            }
-        }
-    }
 
-    fun addBook(book: BookEntity) {
+    fun registerLoan(userId: Long, bookId: Long, loanDate: String, dueDate: String) {
         viewModelScope.launch {
-            try {
-                bookRepository.insert(book)
-                loadBooks()
-            } catch (e: Exception) {
-                _books.update { it.copy(errorMsg = "Error al agregar libro: ${e.message}") }
-            }
-        }
-    }
+            val bookResult = runCatching { bookRepository.getBookById(bookId) }
+            val currentBook = bookResult.getOrNull()
 
-    // -----------------------------
-    // PRÉSTAMOS
-    // -----------------------------
-    fun loadLoans(userId: Long) {
-        viewModelScope.launch {
-            _loans.update { it.copy(isLoading = true) }
-            try {
-                val data = loanRepository.getLoansByUser(userId)
-                _loans.update { it.copy(isLoading = false, loans = data) }
-            } catch (e: Exception) {
-                _loans.update { it.copy(isLoading = false, errorMsg = e.message) }
+            if (currentBook == null || currentBook.status != "Available") {
+                _home.update { it.copy(errorMsg = "Error: Libro no disponible para préstamo.") }
+                return@launch
             }
-        }
-    }
 
-    fun addLoan(loan: LoanEntity) {
-        viewModelScope.launch {
             try {
-                loanRepository.insert(loan)
-                loadLoans(loan.userId)
+                // 1. Crear el Préstamo
+                val newLoan = LoanEntity(userId = userId, bookId = bookId, loanDate = loanDate, dueDate = dueDate, returnDate = null, status = "Active")
+                loanRepository.insert(newLoan)
+
+                // 2. Actualizar Libro a 'Loaned'
+                val updatedBook = currentBook.copy(status = "Loaned")
+                bookRepository.update(updatedBook)
+
+                // 3. Notificación (ejemplo)
+                // notificationRepository.notifyLoanCreated(userId, loanId)
             } catch (e: Exception) {
-                _loans.update { it.copy(errorMsg = "Error al registrar préstamo: ${e.message}") }
+                _home.update { it.copy(errorMsg = "Error al registrar el préstamo: ${e.message}") }
             }
         }
     }
 }
-
-

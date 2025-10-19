@@ -9,7 +9,7 @@ import com.empresa.libra_users.data.repository.NotificationRepository
 
 /**
  * Factory personalizada para crear instancias de MainViewModel
- * inyectando los repositorios necesarios manualmente (sin Hilt).
+ * inyectando los repositorios necesarios manualmente.
  */
 class MainViewModelFactory(
     private val userRepository: UserRepository,
@@ -18,7 +18,7 @@ class MainViewModelFactory(
     private val notificationRepository: NotificationRepository
 ) : ViewModelProvider.Factory {
 
-    @Suppress("UNCHECKED_CAST") // Evita warning del cast genérico
+    @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
@@ -33,5 +33,3 @@ class MainViewModelFactory(
         }
     }
 }
-
-

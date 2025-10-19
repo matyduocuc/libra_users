@@ -10,5 +10,26 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun update(book: BookEntity) = bookDao.update(book)
     suspend fun delete(book: BookEntity) = bookDao.delete(book)
     suspend fun count(): Int = bookDao.count()
-}
 
+    // -------------------------------------------------------------------
+    // FUNCIÓN FINAL Y CORREGIDA PARA EL DISEÑO DE CATÁLOGO
+    // -------------------------------------------------------------------
+
+    suspend fun getCategorizedBooks(): Map<String, List<BookEntity>> {
+        val CUENTOS_CHILENOS_ID = 10L
+        val NARRATIVA_LATINA_ID = 20L
+        val AUTHOR_TAG = "chilena"
+
+        return mapOf(
+            "Recién llegados" to bookDao.getRecentBooks(limit = 6),
+            "Escritoras chilenas" to bookDao.getBooksByAuthorTag(authorTag = AUTHOR_TAG),
+            "Cuentos chilenos" to bookDao.getBooksByCategoryId(categoryId = CUENTOS_CHILENOS_ID),
+            "Nueva narrativa latinoamericana" to bookDao.getBooksByCategoryId(categoryId = NARRATIVA_LATINA_ID)
+        )
+    }
+
+    // AÑADIDO: FUNCIÓN PARA LA PANTALLA DE BÚSQUEDA
+    suspend fun searchBooks(query: String): List<BookEntity> {
+        return bookDao.searchBooks(query) // Llama al nuevo método del DAO
+    }
+}

@@ -10,9 +10,12 @@ data class BookEntity(
     val title: String,
     val author: String,
     val isbn: String,
-    val categoryId: Long, // Relación con categoría
+    val categoryId: Long, // Relación con categoría (usado para filtrar en el catálogo)
     val publisher: String,
     val publishDate: String,
     val status: String,  // 'Available', 'Loaned', 'Damaged', 'Retired'
-    val inventoryCode: String
+    val inventoryCode: String,
+
+    // AÑADIDO: Campo esencial para mostrar la portada en HomeScreen
+    val coverUrl: String = ""
 )

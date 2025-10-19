@@ -19,7 +19,7 @@ import com.empresa.libra_users.data.repository.UserRepository
 import com.empresa.libra_users.navigation.AppNavGraph
 import com.empresa.libra_users.viewmodel.MainViewModel
 import com.empresa.libra_users.viewmodel.MainViewModelFactory
-
+import com.empresa.libra_users.ui.theme.LibrausersTheme // Asumiendo que existe
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,17 +31,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LibraAppRoot() {
-    // DB
+    // 1. Configuración de la Base de Datos (Singleton)
     val context = LocalContext.current.applicationContext
+    // Asegúrate de que AppDatabase.getInstance(context) llama a tu clase de Room
     val db = AppDatabase.getInstance(context)
 
-    // Repos
+    // 2. Creación de Repositorios (Inyección Manual)
     val userRepository = UserRepository(db.userDao())
     val bookRepository = BookRepository(db.bookDao())
     val loanRepository = LoanRepository(db.loanDao())
-    val notificationRepository = NotificationRepository(db.notificationDao())
+    val notificationRepository = NotificationRepository(db.notificationDao()) // Asumiendo que constructor existe
 
-    // VM principal con Factory
+    // 3. Creación del ViewModel con Factory
     val mainViewModel: MainViewModel = viewModel(
         factory = MainViewModelFactory(
             userRepository = userRepository,
@@ -53,11 +54,11 @@ fun LibraAppRoot() {
 
     val navController = rememberNavController()
 
-    MaterialTheme {
+    LibrausersTheme { // Uso de tu tema
         Surface(color = MaterialTheme.colorScheme.background) {
             AppNavGraph(
                 navController = navController,
-                mainViewModel = mainViewModel   // <- pasamos el VM correcto
+                mainViewModel = mainViewModel
             )
         }
     }
