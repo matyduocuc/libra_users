@@ -1,6 +1,5 @@
 package com.empresa.libra_users.screen
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,27 +15,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow // <-- ¡IMPORTACIÓN CORREGIDA AQUÍ!
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.empresa.libra_users.viewmodel.MainViewModel
-import com.empresa.libra_users.viewmodel.HomeUiState
 import com.empresa.libra_users.data.local.user.BookEntity
-// import com.empresa.libra_users.R.drawable.book_placeholder // Requerido si usas recursos locales
+import com.empresa.libra_users.viewmodel.MainViewModel
 
 @Composable
 fun HomeScreen(
     vm: MainViewModel,
-    onGoLogin: () -> Unit,
-    onGoRegister: () -> Unit
+    onLogout: () -> Unit // <-- CAMBIO: Recibe onLogout
 ) {
     val homeState by vm.home.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 80.dp) // Espacio para la barra inferior
+        contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        // 1. Mostrar estado de carga y errores
+        // 1. Indicador de carga y errores
         item {
             if (homeState.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -46,7 +42,7 @@ fun HomeScreen(
             }
         }
 
-        // 2. Iterar sobre las categorías (similar a la imagen del catálogo)
+        // 2. Carruseles de libros por categoría
         homeState.categorizedBooks.forEach { (categoryTitle, books) ->
             item {
                 BookCategorySection(
@@ -57,24 +53,11 @@ fun HomeScreen(
             item { Spacer(Modifier.height(24.dp)) }
         }
 
-        // 3. Sección de Autenticación (se mantiene al final)
-        item {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Button(onClick = onGoLogin) { Text("Ir a Login") }
-                OutlinedButton(onClick = onGoRegister) { Text("Ir a Registro") }
-            }
-        }
+        // 3. SECCIÓN DE BOTONES DE LOGIN/REGISTRO ELIMINADA
     }
 }
 
-// ----------------------------------------------------
-// COMPONENTES DE SOPORTE DEL CATÁLOGO
-// ----------------------------------------------------
+// --- EL RESTO DEL ARCHIVO SE QUEDA IGUAL ---
 
 @Composable
 fun BookCategorySection(
@@ -94,15 +77,11 @@ fun BookCategorySection(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            // Botón "Ver más"
-            IconButton(onClick = { /* Navegar a la vista de "Ver todo" de esta categoría */ }) {
+            IconButton(onClick = { /* Navegar a "Ver todo" */ }) {
                 Icon(Icons.Filled.ArrowForwardIos, contentDescription = "Ver más")
             }
         }
-
         Spacer(Modifier.height(12.dp))
-
-        // Carrusel Horizontal de Libros (LazyRow)
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -116,29 +95,17 @@ fun BookCategorySection(
 
 @Composable
 fun BookCoverItem(book: BookEntity) {
-    // Diseño del ítem de la portada (simulando la imagen del catálogo)
     Column(
-        modifier = Modifier.width(110.dp), // Ancho fijo para las portadas
+        modifier = Modifier.width(110.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        // Área de la Portada
         Box(
             modifier = Modifier
                 .height(160.dp)
                 .fillMaxWidth()
-                .background(Color.Gray.copy(alpha = 0.5f)), // Color de fondo gris como placeholder
+                .background(Color.Gray.copy(alpha = 0.5f)),
             contentAlignment = Alignment.BottomEnd
         ) {
-            // Aquí iría tu componente de carga de imagen (Coil, Glide, etc.) usando book.coverUrl
-            /*
-            AsyncImage(
-                model = book.coverUrl,
-                contentDescription = book.title,
-                modifier = Modifier.fillMaxSize()
-            )
-            */
-
-            // Icono de estantería (placeholder)
             Icon(
                 imageVector = Icons.Default.MenuBook,
                 contentDescription = "Detalles",
@@ -148,15 +115,12 @@ fun BookCoverItem(book: BookEntity) {
                     .size(20.dp)
             )
         }
-
         Spacer(Modifier.height(4.dp))
-
-        // Título del libro
         Text(
             book.title,
             style = MaterialTheme.typography.labelMedium,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis // <-- Referencia simplificada, usa la importación
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

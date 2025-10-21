@@ -1,55 +1,80 @@
 package com.empresa.libra_users.ui.theme.components
 
-import androidx.compose.material.icons.Icons // Íconos Material
-import androidx.compose.material.icons.filled.Home // Ícono Home
-import androidx.compose.material.icons.filled.AccountCircle // Ícono Login
-import androidx.compose.material.icons.filled.Person // Ícono Registro
-import androidx.compose.material3.Icon // Ícono en ítem del drawer
-import androidx.compose.material3.NavigationDrawerItem // Ítem seleccionable
-import androidx.compose.material3.NavigationDrawerItemDefaults // Defaults de estilo
-import androidx.compose.material3.Text // Texto
-import androidx.compose.material3.ModalDrawerSheet // Contenedor de contenido del drawer
-import androidx.compose.runtime.Composable // Marcador composable
-import androidx.compose.ui.Modifier // Modificador
-import androidx.compose.ui.graphics.vector.ImageVector // Tipo de ícono
-// Pequeña data class para representar cada opción del drawer
-data class DrawerItem( // Estructura de un ítem de menú lateral
-    val label: String, // Texto a mostrar
-    val icon: ImageVector, // Ícono del ítem
-    val onClick: () -> Unit // Acción al hacer click
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout // <-- NUEVO IMPORT
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+
+// Data class para representar cada opción del drawer (ESTO SE QUEDA IGUAL)
+data class DrawerItem(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
 )
 
-@Composable // Componente Drawer para usar en ModalNavigationDrawer
+// Componente AppDrawer para usar en ModalNavigationDrawer (ESTO SE QUEDA IGUAL)
+@Composable
 fun AppDrawer(
-    currentRoute: String?, // Ruta actual (para marcar seleccionado si quieres)
-    items: List<DrawerItem>, // Lista de ítems a mostrar
-    modifier: Modifier = Modifier // Modificador opcional
+    currentRoute: String?,
+    items: List<DrawerItem>,
+    modifier: Modifier = Modifier
 ) {
-    ModalDrawerSheet( // Hoja que contiene el contenido del drawer
-        modifier = modifier // Modificador encadenable
+    ModalDrawerSheet(
+        modifier = modifier
     ) {
-        // Recorremos las opciones y pintamos ítems
-        items.forEach { item -> // Por cada ítem
-            NavigationDrawerItem( // Ítem con estados Material
-                label = { Text(item.label) }, // Texto visible
-                selected = false, // Puedes usar currentRoute == ... si quieres marcar
-                onClick = item.onClick, // Acción al pulsar
-                icon = { Icon(item.icon, contentDescription = item.label) }, // Ícono
-                modifier = Modifier, // Sin mods extra
-                colors = NavigationDrawerItemDefaults.colors() // Estilo por defecto
+        items.forEach { item ->
+            NavigationDrawerItem(
+                label = { Text(item.label) },
+                selected = false,
+                onClick = item.onClick,
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                modifier = Modifier,
+                colors = NavigationDrawerItemDefaults.colors()
             )
         }
     }
 }
 
-// Helper para construir la lista estándar de ítems del drawer
+// Helper para construir la lista para usuarios SIN sesión (ESTO SE QUEDA IGUAL)
 @Composable
 fun defaultDrawerItems(
-    onHome: () -> Unit,   // Acción Home
-    onLogin: () -> Unit,  // Acción Login
-    onRegister: () -> Unit // Acción Registro
+    onHome: () -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit
 ): List<DrawerItem> = listOf(
-    DrawerItem("Home", Icons.Filled.Home, onHome),          // Ítem Home
-    DrawerItem("Login", Icons.Filled.AccountCircle, onLogin),       // Ítem Login
-    DrawerItem("Registro", Icons.Filled.Person, onRegister) // Ítem Registro
+    DrawerItem("Home", Icons.Filled.Home, onHome),
+    DrawerItem("Login", Icons.Filled.AccountCircle, onLogin),
+    DrawerItem("Registro", Icons.Filled.Person, onRegister)
 )
+
+// =================================================================
+// NUEVA FUNCIÓN AÑADIDA PARA USUARIOS CON SESIÓN
+// =================================================================
+@Composable
+fun authenticatedDrawerItems(
+    onHome: () -> Unit,
+    onLogout: () -> Unit
+): List<DrawerItem> {
+    return listOf(
+        DrawerItem(
+            label = "Home",
+            icon = Icons.Filled.Home,
+            onClick = onHome
+        ),
+        // Aquí puedes añadir más items en el futuro (Mi Perfil, etc.)
+        DrawerItem(
+            label = "Cerrar Sesión",
+            icon = Icons.AutoMirrored.Filled.Logout,
+            onClick = onLogout
+        )
+    )
+}
