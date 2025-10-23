@@ -131,6 +131,10 @@ class MainViewModel(
         }
     }
 
+    suspend fun getBookById(bookId: Long): BookEntity? {
+        return bookRepository.getBookById(bookId)
+    }
+
     // --- Lógica de Búsqueda ---
     // Soporta debounce automático mientras se escribe y búsqueda inmediata al invocar performSearch()
 

@@ -5,8 +5,7 @@ package com.empresa.libra_users.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.* // Import all filled icons
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,10 +23,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.empresa.libra_users.screen.BookDetailsScreen
 import com.empresa.libra_users.screen.HomeScreen
 import com.empresa.libra_users.screen.LoginScreen
 import com.empresa.libra_users.screen.RegisterScreen
@@ -43,6 +45,7 @@ object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val HOME = "home"
+    const val BOOK_DETAILS = "book_details/{bookId}" // Ruta con argumento
 }
 
 @Composable
@@ -86,7 +89,10 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                     onLogout = {
                         scope.launch { drawerState.close() }
                         onLogout()
-                    }
+                    },
+                    onCatalog = { scope.launch { drawerState.close() } },
+                    onNews = { scope.launch { drawerState.close() } },
+                    onAccountSettings = { scope.launch { drawerState.close() } }
                 )
             )
         }
@@ -134,7 +140,21 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                 composable(Routes.HOME) {
                     HomeScreen(
                         vm = vm,
-                        onLogout = onLogout // Se lo pasamos por si acaso, aunque el botón ya está arriba.
+                        onLogout = onLogout, // Se lo pasamos por si acaso, aunque el botón ya está arriba.
+                        onBookClick = {
+                            navController.navigate("book_details/$it")
+                        }
+                    )
+                }
+                composable(
+                    route = Routes.BOOK_DETAILS,
+                    arguments = listOf(navArgument("bookId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val bookId = backStackEntry.arguments?.getLong("bookId") ?: 0
+                    BookDetailsScreen(
+                        vm = vm,
+                        bookId = bookId,
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 // Aquí puedes añadir más pantallas como Search, Profile, etc.

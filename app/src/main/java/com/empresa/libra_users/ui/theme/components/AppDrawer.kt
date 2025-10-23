@@ -1,10 +1,8 @@
 package com.empresa.libra_users.ui.theme.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout // <-- NUEVO IMPORT
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
@@ -56,21 +54,36 @@ fun defaultDrawerItems(
     DrawerItem("Registro", Icons.Filled.Person, onRegister)
 )
 
-// =================================================================
-// NUEVA FUNCIÓN AÑADIDA PARA USUARIOS CON SESIÓN
-// =================================================================
 @Composable
 fun authenticatedDrawerItems(
     onHome: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    // Añadimos callbacks para las nuevas opciones
+    onCatalog: () -> Unit,
+    onNews: () -> Unit,
+    onAccountSettings: () -> Unit
 ): List<DrawerItem> {
     return listOf(
         DrawerItem(
-            label = "Home",
-            icon = Icons.Filled.Home,
+            label = "Novedades",
+            icon = Icons.Filled.NewReleases,
             onClick = onHome
         ),
-        // Aquí puedes añadir más items en el futuro (Mi Perfil, etc.)
+        DrawerItem(
+            label = "Catálogo",
+            icon = Icons.Filled.MenuBook,
+            onClick = onCatalog
+        ),
+        DrawerItem(
+            label = "Noticias",
+            icon = Icons.Filled.Feed,
+            onClick = onNews
+        ),
+        DrawerItem(
+            label = "Configuración de la cuenta",
+            icon = Icons.Filled.Settings,
+            onClick = onAccountSettings
+        ),
         DrawerItem(
             label = "Cerrar Sesión",
             icon = Icons.AutoMirrored.Filled.Logout,
