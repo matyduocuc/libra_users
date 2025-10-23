@@ -17,6 +17,7 @@ import com.empresa.libra_users.data.repository.NotificationRepository
 import com.empresa.libra_users.data.repository.UserRepository
 import com.empresa.libra_users.navigation.AppNavigation // <-- CAMBIO: Importamos AppNavigation
 import com.empresa.libra_users.ui.theme.LibrausersTheme
+import com.empresa.libra_users.util.RequestPermissions
 import com.empresa.libra_users.viewmodel.MainViewModel
 import com.empresa.libra_users.viewmodel.MainViewModelFactory
 
@@ -50,10 +51,12 @@ fun LibraAppRoot() {
     )
 
     LibrausersTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            // CAMBIO: Llamamos a nuestro nuevo sistema de navegación
-            // Ya no se usa AppNavGraph, sino AppNavigation
-            AppNavigation(vm = mainViewModel)
+        RequestPermissions {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                // CAMBIO: Llamamos a nuestro nuevo sistema de navegación
+                // Ya no se usa AppNavGraph, sino AppNavigation
+                AppNavigation(vm = mainViewModel)
+            }
         }
     }
 }
