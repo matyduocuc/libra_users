@@ -1,14 +1,14 @@
-// kotlin
 package com.empresa.libra_users.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.empresa.libra_users.data.local.user.BookEntity
 import com.empresa.libra_users.data.local.user.LoanEntity
-import com.empresa.libra_users.data.repository.UserRepository
+import com.empresa.libra_users.data.local.user.UserEntity
 import com.empresa.libra_users.data.repository.BookRepository
 import com.empresa.libra_users.data.repository.LoanRepository
 import com.empresa.libra_users.data.repository.NotificationRepository
+import com.empresa.libra_users.data.repository.UserRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,6 +66,15 @@ data class SearchUiState(
     val initialSearchPerformed: Boolean = false
 )
 
+data class UpdateUserUiState(
+    val name: String = "",
+    val email: String = "",
+    val phone: String = "",
+    val isSubmitting: Boolean = false,
+    val success: Boolean = false,
+    val errorMsg: String? = null
+)
+
 class MainViewModel(
     private val userRepository: UserRepository,
     private val bookRepository: BookRepository,
@@ -83,15 +92,18 @@ class MainViewModel(
     private val _home = MutableStateFlow(HomeUiState())
     val home: StateFlow<HomeUiState> = _home.asStateFlow()
 
-    // StateFlow para la búsqueda
     private val _search = MutableStateFlow(SearchUiState())
     val search: StateFlow<SearchUiState> = _search.asStateFlow()
 
-    // Estado de autenticación (visible en UI)
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
-    // Job para debounce de búsqueda en onSearchQueryChange
+    private val _user = MutableStateFlow<UserEntity?>(null)
+    val user: StateFlow<UserEntity?> = _user.asStateFlow()
+
+    private val _updateUserState = MutableStateFlow(UpdateUserUiState())
+    val updateUserState: StateFlow<UpdateUserUiState> = _updateUserState.asStateFlow()
+
     private var searchDebounceJob: Job? = null
     private val searchDebounceMillis = 500L
 
@@ -101,7 +113,6 @@ class MainViewModel(
     }
 
     private fun startCoverRotation() {
-        // Evitar loop si no hay imágenes
         if (_home.value.coverImages.isEmpty()) return
         viewModelScope.launch {
             while (true) {
@@ -135,37 +146,28 @@ class MainViewModel(
         return bookRepository.getBookById(bookId)
     }
 
-    // --- Lógica de Búsqueda ---
-    // Soporta debounce automático mientras se escribe y búsqueda inmediata al invocar performSearch()
-
     fun onSearchQueryChange(newQuery: String) {
         _search.update { it.copy(query = newQuery) }
 
-        // Si la query queda vacía, limpiar resultados inmediatamente
         if (newQuery.isBlank()) {
             _search.update { it.copy(results = emptyList(), errorMsg = null, isLoading = false) }
             searchDebounceJob?.cancel()
             return
         }
 
-        // Reiniciar debounce
         searchDebounceJob?.cancel()
         searchDebounceJob = viewModelScope.launch {
             delay(searchDebounceMillis)
-            // Ejecutar búsqueda automática
             performSearchInternal(_search.value.query)
         }
     }
 
-    // Búsqueda invocable desde UI (botón): hace búsqueda inmediata
     fun performSearch() {
         val currentQuery = _search.value.query.trim()
         if (currentQuery.isBlank()) {
-            // limpiar si está en blanco
             _search.update { it.copy(results = emptyList(), errorMsg = null, isLoading = false) }
             return
         }
-        // cancelar debounce si hay
         searchDebounceJob?.cancel()
         performSearchInternal(currentQuery)
     }
@@ -177,7 +179,6 @@ class MainViewModel(
                 val searchResults = try {
                     bookRepository.searchBooks(query) ?: emptyList()
                 } catch (e: Exception) {
-                    // Si el repositorio lanza, capturamos y devolvemos lista vacía
                     _search.update { it.copy(isLoading = false, errorMsg = "Error al buscar: ${e.message}") }
                     return@launch
                 }
@@ -192,10 +193,6 @@ class MainViewModel(
         _search.update { SearchUiState() }
         searchDebounceJob?.cancel()
     }
-
-    // -----------------------------
-    // LÓGICA DE AUTENTICACIÓN (LOGIN)
-    // -----------------------------
 
     fun onLoginEmailChange(value: String) {
         val emailError = if (value.contains("@") && value.isNotBlank()) null else "Correo inválido"
@@ -222,7 +219,6 @@ class MainViewModel(
             val result = try {
                 userRepository.login(s.email.trim(), s.pass)
             } catch (e: Exception) {
-                // Manejo de excepción del repositorio
                 _login.update { it.copy(isSubmitting = false, errorMsg = e.message ?: "Error de login") }
                 return@launch
             }
@@ -230,9 +226,9 @@ class MainViewModel(
                 if (result.isSuccess) it.copy(isSubmitting = false, success = true)
                 else it.copy(isSubmitting = false, errorMsg = result.exceptionOrNull()?.message ?: "Credenciales inválidas")
             }
-            // Si el login fue exitoso, marcar sesión iniciada
             if (result.isSuccess) {
                 _isLoggedIn.value = true
+                _user.value = userRepository.getUserByEmail(s.email.trim())
             }
         }
     }
@@ -242,18 +238,11 @@ class MainViewModel(
     }
 
     fun logout() {
-        // Limpiar estado de sesión localmente
         _isLoggedIn.value = false
-        // Limpiar datos de login en UI
+        _user.value = null
         _login.update { LoginUiState() }
-        // Limpiar búsqueda al cerrar sesión para que no quede visible en pantalla principal
         clearSearchResults()
-        // Nota: si UserRepository expone limpieza de sesión/tokens, llamarla desde aquí
     }
-
-    // -----------------------------
-    // LÓGICA DE AUTENTICACIÓN (REGISTER)
-    // -----------------------------
 
     fun onRegisterNameChange(value: String) {
         val error = if (value.isBlank()) "El nombre es obligatorio" else null
@@ -316,10 +305,6 @@ class MainViewModel(
         _register.update { it.copy(success = false, errorMsg = null) }
     }
 
-    // -----------------------------
-    // LÓGICA DE NEGOCIO AVANZADA: PRÉSTAMO
-    // -----------------------------
-
     fun registerLoan(userId: Long, bookId: Long, loanDate: String, dueDate: String) {
         viewModelScope.launch {
             val bookResult = runCatching { bookRepository.getBookById(bookId) }
@@ -337,10 +322,59 @@ class MainViewModel(
                 val updatedBook = currentBook.copy(status = "Loaned")
                 bookRepository.update(updatedBook)
 
-                // notificationRepository.notifyLoanCreated(userId, loanId) // ejemplo
             } catch (e: Exception) {
                 _home.update { it.copy(errorMsg = "Error al registrar el préstamo: ${e.message}") }
             }
         }
+    }
+
+    fun onUpdateUserNameChange(name: String) {
+        _updateUserState.update { it.copy(name = name) }
+    }
+
+    fun onUpdateUserEmailChange(email: String) {
+        _updateUserState.update { it.copy(email = email) }
+    }
+
+    fun onUpdateUserPhoneChange(phone: String) {
+        _updateUserState.update { it.copy(phone = phone) }
+    }
+
+    fun loadCurrentUserData() {
+        _user.value?.let {
+            _updateUserState.update {
+                it.copy(
+                    name = _user.value?.name ?: "",
+                    email = _user.value?.email ?: "",
+                    phone = _user.value?.phone ?: ""
+                )
+            }
+        }
+    }
+
+    fun updateUser() {
+        viewModelScope.launch {
+            _updateUserState.update { it.copy(isSubmitting = true) }
+            try {
+                val updatedUser = _user.value?.copy(
+                    name = _updateUserState.value.name,
+                    email = _updateUserState.value.email,
+                    phone = _updateUserState.value.phone
+                )
+                if (updatedUser != null) {
+                    userRepository.updateUser(updatedUser)
+                    _user.value = updatedUser
+                    _updateUserState.update { it.copy(isSubmitting = false, success = true) }
+                } else {
+                    _updateUserState.update { it.copy(isSubmitting = false, errorMsg = "Usuario no encontrado") }
+                }
+            } catch (e: Exception) {
+                _updateUserState.update { it.copy(isSubmitting = false, errorMsg = e.message) }
+            }
+        }
+    }
+
+    fun clearUpdateUserState() {
+        _updateUserState.update { it.copy(success = false, errorMsg = null) }
     }
 }

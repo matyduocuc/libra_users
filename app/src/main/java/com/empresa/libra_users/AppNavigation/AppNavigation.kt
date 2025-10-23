@@ -5,17 +5,17 @@ package com.empresa.libra_users.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.* // Import all filled icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme // <-- Importante para usar los colores del tema
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults // <-- Importante para los colores de la TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,23 +29,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.empresa.libra_users.screen.BookDetailsScreen
-import com.empresa.libra_users.screen.HomeScreen
-import com.empresa.libra_users.screen.LoginScreen
-import com.empresa.libra_users.screen.RegisterScreen
+import com.empresa.libra_users.screen.*
 import com.empresa.libra_users.ui.theme.components.AppDrawer
 import com.empresa.libra_users.ui.theme.components.authenticatedDrawerItems
 import com.empresa.libra_users.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
-// El objeto Routes se queda igual
 object Routes {
     const val AUTH_GRAPH = "auth_graph"
     const val MAIN_GRAPH = "main_graph"
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val HOME = "home"
-    const val BOOK_DETAILS = "book_details/{bookId}" // Ruta con argumento
+    const val BOOK_DETAILS = "book_details/{bookId}"
+    const val CATALOG = "catalog"
+    const val NEWS = "news"
+    const val ACCOUNT_SETTINGS = "account_settings"
 }
 
 @Composable
@@ -53,7 +52,6 @@ fun AppNavigation(vm: MainViewModel) {
     val navController = rememberNavController()
     val isLoggedIn by vm.isLoggedIn.collectAsStateWithLifecycle()
 
-    // La lógica principal sigue siendo la misma: mostramos una vista u otra.
     if (isLoggedIn) {
         AuthenticatedView(navController = navController, vm = vm)
     } else {
@@ -61,27 +59,20 @@ fun AppNavigation(vm: MainViewModel) {
     }
 }
 
-// ===================================================================
-// VISTA PARA USUARIOS CON SESIÓN (AHORA CON DRAWER Y TOPAPPBAR)
-// ===================================================================
 @Composable
 private fun AuthenticatedView(navController: NavHostController, vm: MainViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val routeNow = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    val onLogout = {
-        vm.logout()
-        // No es necesario navegar, el cambio de `isLoggedIn` a `false` reconstruirá
-        // la UI para mostrar `UnauthenticatedView` automáticamente.
-    }
+    val onLogout = { vm.logout() }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
                 currentRoute = routeNow,
-                items = authenticatedDrawerItems( // Usamos la lista de items para usuarios logueados
+                items = authenticatedDrawerItems(
                     onHome = {
                         scope.launch { drawerState.close() }
                         navController.navigate(Routes.HOME) { launchSingleTop = true }
@@ -90,9 +81,18 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                         scope.launch { drawerState.close() }
                         onLogout()
                     },
-                    onCatalog = { scope.launch { drawerState.close() } },
-                    onNews = { scope.launch { drawerState.close() } },
-                    onAccountSettings = { scope.launch { drawerState.close() } }
+                    onCatalog = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Routes.CATALOG) { launchSingleTop = true }
+                    },
+                    onNews = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Routes.NEWS) { launchSingleTop = true }
+                    },
+                    onAccountSettings = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Routes.ACCOUNT_SETTINGS) { launchSingleTop = true }
+                    }
                 )
             )
         }
@@ -117,21 +117,14 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                             )
                         }
                     },
-                    // =======================================================
-                    // ===             AQUÍ ESTÁ EL CAMBIO DE COLOR        ===
-                    // =======================================================
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        // Color para el icono de navegación (menú)
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
-                        // Color para los iconos de acción (home, logout)
                         actionIconContentColor = MaterialTheme.colorScheme.primary,
-                        // Opcional: También puedes cambiar el color del título
                         titleContentColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
         ) { innerPadding ->
-            // Aquí va el contenido principal de la app (HomeScreen, etc.)
             NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
@@ -140,10 +133,8 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                 composable(Routes.HOME) {
                     HomeScreen(
                         vm = vm,
-                        onLogout = onLogout, // Se lo pasamos por si acaso, aunque el botón ya está arriba.
-                        onBookClick = {
-                            navController.navigate("book_details/$it")
-                        }
+                        onLogout = onLogout,
+                        onBookClick = { navController.navigate("book_details/$it") }
                     )
                 }
                 composable(
@@ -157,19 +148,22 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                         onBack = { navController.popBackStack() }
                     )
                 }
-                // Aquí puedes añadir más pantallas como Search, Profile, etc.
-                // composable("search") { ... }
+                composable(Routes.CATALOG) {
+                    CatalogScreen()
+                }
+                composable(Routes.NEWS) {
+                    NewsScreen()
+                }
+                composable(Routes.ACCOUNT_SETTINGS) {
+                    AccountSettingsScreen(vm = vm)
+                }
             }
         }
     }
 }
 
-// ===================================================================
-// VISTA PARA USUARIOS SIN SESIÓN (ESTA PARTE NO CAMBIA)
-// ===================================================================
 @Composable
 private fun UnauthenticatedView(navController: NavHostController, vm: MainViewModel) {
-    // Un NavHost simple solo con las pantallas de autenticación, sin Scaffold ni menús.
     NavHost(
         navController = navController,
         startDestination = Routes.LOGIN
@@ -179,8 +173,6 @@ private fun UnauthenticatedView(navController: NavHostController, vm: MainViewMo
                 vm = vm,
                 onGoRegister = { navController.navigate(Routes.REGISTER) },
                 onLoginOkNavigateHome = {
-                    // Al iniciar sesión correctamente, la variable `isLoggedIn` cambiará a `true`
-                    // y la UI se reconstruirá para mostrar `AuthenticatedView`.
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }

@@ -33,5 +33,12 @@ class UserRepository(
             return Result.success(id)
         }
     }
-    // ... (Métodos de updateUser y deleteUser sin cambios) ...
+
+    suspend fun getUserByEmail(email: String): UserEntity? {
+        return userDao.getByEmail(email)
+    }
+
+    suspend fun updateUser(user: UserEntity) {
+        userDao.update(user)
+    }
 }
