@@ -149,7 +149,7 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                     )
                 }
                 composable(Routes.CATALOG) {
-                    CatalogScreen()
+                    CatalogScreen(vm = vm, onBookClick = { navController.navigate("book_details/$it") })
                 }
                 composable(Routes.NEWS) {
                     NewsScreen()
