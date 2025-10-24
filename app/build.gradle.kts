@@ -3,12 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 
-    // ✳️ Hilt usa KAPT
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.hilt)
-
-    // ✳️ Room usa KSP
+    // Unificamos todo a KSP para Room y Hilt
     alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -77,11 +74,11 @@ dependencies {
     // ---------- Room (KSP) ----------
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    ksp(libs.room.compiler)   // ✅ SOLO KSP para Room
+    ksp(libs.room.compiler)   // ✅ KSP para Room
 
-    // ---------- Hilt (KAPT) ----------
+    // ---------- Hilt (KSP) ----------
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)      // ✅ KSP para Hilt
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // ---------- Tests / Debug ----------
@@ -94,11 +91,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-}
-
-// KAPT para Hilt
-kapt {
-    correctErrorTypes = true
 }
 
 // KSP para Room (opcional, para exportar esquemas)
