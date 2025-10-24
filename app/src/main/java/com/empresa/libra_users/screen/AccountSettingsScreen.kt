@@ -43,6 +43,14 @@ fun AccountSettingsScreen(vm: MainViewModel) {
         }
     }
 
+    // Si debemos mostrar el diálogo de verificación, lo componemos
+    if (updateUserState.showVerificationDialog) {
+        VerificationDialog(
+            vm = vm,
+            onDismiss = { vm.cancelEmailUpdate() }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) {
@@ -55,20 +63,21 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             Text("Configuración de la cuenta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
 
-            Text("Aquí puedes ver y editar la información de tu cuenta.", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(24.dp))
+            // Campo para el ID de usuario (solo lectura)
+            OutlinedTextField(
+                value = updateUserState.userId,
+                onValueChange = {},
+                label = { Text("ID de Usuario") },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true
+            )
+            Spacer(Modifier.height(16.dp))
 
+            // Campos para el nombre y teléfono (editables)
             OutlinedTextField(
                 value = updateUserState.name,
                 onValueChange = { vm.onUpdateUserNameChange(it) },
                 label = { Text("Nombre") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = updateUserState.email,
-                onValueChange = { vm.onUpdateUserEmailChange(it) },
-                label = { Text("Correo electrónico") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(16.dp))
@@ -78,6 +87,23 @@ fun AccountSettingsScreen(vm: MainViewModel) {
                 label = { Text("Teléfono") },
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(16.dp))
+
+            // Sección para el correo electrónico con botón de cambio
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = updateUserState.email,
+                    onValueChange = { vm.onUpdateUserEmailChange(it) },
+                    label = { Text("Correo electrónico") },
+                    modifier = Modifier.weight(1f),
+                    // Se deshabilita si el diálogo de verificación está abierto
+                    enabled = !updateUserState.showVerificationDialog
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { vm.initiateEmailUpdate() }) {
+                    Text("Cambiar")
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
 
@@ -90,4 +116,52 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             }
         }
     }
+}
+
+@Composable
+private fun VerificationDialog(vm: MainViewModel, onDismiss: () -> Unit) {
+    val updateUserState by vm.updateUserState.collectAsStateWithLifecycle()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Verificar correo electrónico") },
+        text = {
+            Column {
+                Text("Se ha enviado un código de verificación a su correo. Por favor, introdúzcalo a continuación.")
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = updateUserState.verificationCode,
+                    onValueChange = { vm.onVerificationCodeChange(it) },
+                    label = { Text("Código de Verificación") },
+                    isError = updateUserState.verificationError != null,
+                    singleLine = true
+                )
+                if (updateUserState.verificationError != null) {
+                    Text(
+                        text = updateUserState.verificationError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { vm.confirmEmailUpdate() },
+                enabled = !updateUserState.isVerifying
+            ) {
+                if (updateUserState.isVerifying) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Confirmar")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

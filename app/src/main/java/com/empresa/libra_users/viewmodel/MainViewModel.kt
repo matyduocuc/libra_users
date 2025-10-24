@@ -67,13 +67,20 @@ data class SearchUiState(
 )
 
 data class UpdateUserUiState(
+    val userId: String = "", // ID de usuario para mostrar
     val name: String = "",
     val email: String = "",
     val phone: String = "",
     val isSubmitting: Boolean = false,
     val success: Boolean = false,
-    val errorMsg: String? = null
+    val errorMsg: String? = null,
+    // Campos para el flujo de verificación de 2 pasos
+    val showVerificationDialog: Boolean = false,
+    val verificationCode: String = "",
+    val isVerifying: Boolean = false,
+    val verificationError: String? = null
 )
+
 
 class MainViewModel(
     private val userRepository: UserRepository,
@@ -103,6 +110,10 @@ class MainViewModel(
 
     private val _updateUserState = MutableStateFlow(UpdateUserUiState())
     val updateUserState: StateFlow<UpdateUserUiState> = _updateUserState.asStateFlow()
+
+    // Estado para el modo oscuro
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
     private var searchDebounceJob: Job? = null
     private val searchDebounceMillis = 500L
@@ -341,15 +352,23 @@ class MainViewModel(
     }
 
     fun loadCurrentUserData() {
-        _user.value?.let {
+        _user.value?.let { user ->
             _updateUserState.update {
                 it.copy(
-                    name = _user.value?.name ?: "",
-                    email = _user.value?.email ?: "",
-                    phone = _user.value?.phone ?: ""
+                    userId = formatUserId(user.id, user.email), // Cargar ID de usuario formateado
+                    name = user.name ?: "",
+                    email = user.email ?: "",
+                    phone = user.phone ?: ""
                 )
             }
         }
+    }
+
+    private fun formatUserId(id: Long, email: String): String {
+        val lettersSource = kotlin.math.abs(email.hashCode().toLong()).toString(36)
+        val letters = lettersSource.filter { it.isLetter() }.take(5).uppercase().padEnd(5, 'X')
+        val lastDigit = id.toString().last()
+        return "$letters$lastDigit"
     }
 
     fun updateUser() {
@@ -358,7 +377,7 @@ class MainViewModel(
             try {
                 val updatedUser = _user.value?.copy(
                     name = _updateUserState.value.name,
-                    email = _updateUserState.value.email,
+                    email = _updateUserState.value.email, // El email se actualizará tras la verificación
                     phone = _updateUserState.value.phone
                 )
                 if (updatedUser != null) {
@@ -376,5 +395,45 @@ class MainViewModel(
 
     fun clearUpdateUserState() {
         _updateUserState.update { it.copy(success = false, errorMsg = null) }
+    }
+
+    // --- Funciones para la verificación de 2 pasos ---
+
+    fun onVerificationCodeChange(code: String) {
+        _updateUserState.update { it.copy(verificationCode = code, verificationError = null) }
+    }
+
+    fun initiateEmailUpdate() {
+        // Simulamos que se envía un correo y mostramos el diálogo
+        _updateUserState.update { it.copy(showVerificationDialog = true, verificationCode = "", verificationError = null) }
+    }
+
+    fun confirmEmailUpdate() {
+        viewModelScope.launch {
+            _updateUserState.update { it.copy(isVerifying = true, verificationError = null) }
+
+            // --- SIMULACIÓN DE VERIFICACIÓN ---
+            // En una app real, aquí llamarías al backend para verificar el código.
+            // Por ahora, aceptamos cualquier código no vacío como válido.
+            delay(1000) // Simular latencia de red
+
+            if (_updateUserState.value.verificationCode.isNotBlank()) {
+                // Código "válido", procedemos a actualizar el email
+                _updateUserState.update { it.copy(isVerifying = false, showVerificationDialog = false) }
+                updateUser() // Llama a la función que guarda los datos
+            } else {
+                // Código "inválido"
+                _updateUserState.update { it.copy(isVerifying = false, verificationError = "El código no puede estar vacío.") }
+            }
+        }
+    }
+
+    fun cancelEmailUpdate() {
+        _updateUserState.update { it.copy(showVerificationDialog = false, verificationError = null, verificationCode = "") }
+    }
+
+    // --- Función para el modo oscuro ---
+    fun toggleDarkMode() {
+        _isDarkMode.value = !_isDarkMode.value
     }
 }

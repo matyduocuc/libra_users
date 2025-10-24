@@ -16,49 +16,63 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.empresa.libra_users.viewmodel.MainViewModel
 import com.empresa.libra_users.viewmodel.RegisterUiState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
     onRegisteredNavigateLogin: () -> Unit,
     onGoLogin: () -> Unit,
-    vm: MainViewModel            // ← AHORA se recibe por parámetro
+    vm: MainViewModel
 ) {
     val state: RegisterUiState by vm.register.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    // Navega cuando el registro fue exitoso
+    // Efecto para mostrar el Snackbar y navegar tras el registro exitoso
     LaunchedEffect(state.success) {
         if (state.success) {
-            vm.clearRegisterResult()
-            onRegisteredNavigateLogin()
+            scope.launch {
+                snackbarHostState.showSnackbar("¡Cuenta creada con éxito!")
+                delay(3000) // Espera 3 segundos
+                onRegisteredNavigateLogin()
+                vm.clearRegisterResult()
+            }
         }
     }
 
-    RegisterContent(
-        name           = state.name,
-        email          = state.email,
-        phone          = state.phone,
-        pass           = state.pass,
-        confirm        = state.confirm,
-        nameError      = state.nameError,
-        emailError     = state.emailError,
-        phoneError     = state.phoneError,
-        passError      = state.passError,
-        confirmError   = state.confirmError,
-        canSubmit      = state.canSubmit,
-        isSubmitting   = state.isSubmitting,
-        errorMsg       = state.errorMsg,
-        onNameChange   = vm::onRegisterNameChange,
-        onEmailChange  = vm::onRegisterEmailChange,
-        onPhoneChange  = vm::onRegisterPhoneChange,
-        onPassChange   = vm::onRegisterPassChange,
-        onConfirmChange= vm::onRegisterConfirmChange,
-        onSubmit       = vm::submitRegister,
-        onGoLogin      = onGoLogin
-    )
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) {
+        RegisterContent(
+            modifier = Modifier.padding(it),
+            name = state.name,
+            email = state.email,
+            phone = state.phone,
+            pass = state.pass,
+            confirm = state.confirm,
+            nameError = state.nameError,
+            emailError = state.emailError,
+            phoneError = state.phoneError,
+            passError = state.passError,
+            confirmError = state.confirmError,
+            canSubmit = state.canSubmit,
+            isSubmitting = state.isSubmitting,
+            errorMsg = state.errorMsg,
+            onNameChange = vm::onRegisterNameChange,
+            onEmailChange = vm::onRegisterEmailChange,
+            onPhoneChange = vm::onRegisterPhoneChange,
+            onPassChange = vm::onRegisterPassChange,
+            onConfirmChange = vm::onRegisterConfirmChange,
+            onSubmit = vm::submitRegister,
+            onGoLogin = onGoLogin
+        )
+    }
 }
 
 @Composable
 private fun RegisterContent(
+    modifier: Modifier = Modifier,
     name: String,
     email: String,
     phone: String,
@@ -84,7 +98,7 @@ private fun RegisterContent(
     var showConfirm by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         contentAlignment = Alignment.Center

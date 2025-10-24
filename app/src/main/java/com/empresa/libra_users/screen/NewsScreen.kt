@@ -27,7 +27,7 @@ val sampleNews = listOf(
     NewsArticle(
         "La biblioteca inaugura una nueva sección de ciencia ficción",
         "Explora nuevos mundos con nuestra colección expandida de clásicos y novedades del género.",
-        "https://images.unsplash.com/photo-1588582265248-8b50-a71d4b69de6b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+        "https://thumbs.dreamstime.com/b/libros-de-las-ciencia-ficci%C3%B3n-en-biblioteca-37541982.jpg"
     ),
     NewsArticle(
         "Taller de escritura creativa este fin de semana",
@@ -35,9 +35,9 @@ val sampleNews = listOf(
         "https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=1973&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
     ),
     NewsArticle(
-        "Conoce al autor: Entrevista con Jane Doe",
-        "La aclamada autora de 'El último amanecer' nos visitará para una sesión de preguntas y respuestas.",
-        "https://images.unsplash.com/photo-1611606063065-ee7946f07316?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+        "Conoce al autor: Entrevista con Joanne Rowling",
+        "La aclamada autora de 'Harry Potter' nos visitará para una sesión de preguntas y respuestas.",
+        "https://cloudfront-eu-central-1.images.arcpublishing.com/prisaradio/PNUXNLKILRLZ3OBAMXFP5HQX6Y.jpg"
     )
 )
 

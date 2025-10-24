@@ -54,6 +54,7 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val routeNow = navController.currentBackStackEntryAsState().value?.destination?.route
+    val isDarkMode by vm.isDarkMode.collectAsStateWithLifecycle()
 
     val onLogout = { vm.logout() }
 
@@ -62,6 +63,8 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
         drawerContent = {
             AppDrawer(
                 currentRoute = routeNow,
+                isDarkMode = isDarkMode,
+                onToggleDarkMode = { vm.toggleDarkMode() },
                 items = authenticatedDrawerItems(
                     onHome = { scope.launch { drawerState.close() }; navController.navigate("home") { launchSingleTop = true } },
                     onLogout = { scope.launch { drawerState.close() }; onLogout() },
