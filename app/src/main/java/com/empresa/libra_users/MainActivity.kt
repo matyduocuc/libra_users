@@ -6,6 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -18,15 +21,19 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { LibraAppRoot() }
+        setContent {
+            val windowSizeClass = calculateWindowSizeClass(this)
+            LibraAppRoot(windowSizeClass = windowSizeClass)
+        }
     }
 }
 
 @Composable
-fun LibraAppRoot() {
+fun LibraAppRoot(windowSizeClass: WindowSizeClass) {
     // El ViewModel ahora es obtenido directamente a través de Hilt
     val mainViewModel: MainViewModel = hiltViewModel()
 
@@ -35,7 +42,10 @@ fun LibraAppRoot() {
     LibrausersTheme(darkTheme = isDarkMode) {
         RequestPermissions {
             Surface(color = MaterialTheme.colorScheme.background) {
-                AppNavigation(vm = mainViewModel)
+                AppNavigation(
+                    vm = mainViewModel,
+                    windowSizeClass = windowSizeClass
+                )
             }
         }
     }

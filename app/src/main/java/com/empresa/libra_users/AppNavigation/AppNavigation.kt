@@ -2,26 +2,35 @@
 
 package com.empresa.libra_users.navigation
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -29,11 +38,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.empresa.libra_users.screen.*
-import com.empresa.libra_users.ui.theme.components.AppDrawer
-import com.empresa.libra_users.ui.theme.components.authenticatedDrawerItems
+import com.empresa.libra_users.screen.AccountSettingsScreen
+import com.empresa.libra_users.screen.BookDetailsScreen
+import com.empresa.libra_users.screen.CatalogScreen
+import com.empresa.libra_users.screen.HomeScreen
+import com.empresa.libra_users.screen.LoginScreen
+import com.empresa.libra_users.screen.NewsScreen
+import com.empresa.libra_users.screen.RegisterScreen
 import com.empresa.libra_users.viewmodel.MainViewModel
-import kotlinx.coroutines.launch
 
 object Routes {
     const val AUTH_GRAPH = "auth_graph"
@@ -47,72 +59,63 @@ object Routes {
     const val ACCOUNT_SETTINGS = "account_settings"
 }
 
+// Data class para representar nuestros items de navegación
+data class NavItem(
+    val route: String,
+    val label: String,
+    val icon: ImageVector
+)
+
+// Lista con los items de navegación principales
+val mainNavItems = listOf(
+    NavItem(Routes.HOME, "Inicio", Icons.Default.Home),
+    NavItem(Routes.CATALOG, "Catálogo", Icons.Default.MenuBook),
+    NavItem(Routes.NEWS, "Noticias", Icons.Default.Article),
+    NavItem(Routes.ACCOUNT_SETTINGS, "Cuenta", Icons.Default.AccountCircle)
+)
+
 @Composable
-fun AppNavigation(vm: MainViewModel) {
+fun AppNavigation(
+    vm: MainViewModel,
+    windowSizeClass: WindowSizeClass // Recibimos la clase de tamaño
+) {
     val navController = rememberNavController()
     val isLoggedIn by vm.isLoggedIn.collectAsStateWithLifecycle()
 
     if (isLoggedIn) {
-        AuthenticatedView(navController = navController, vm = vm)
+        AuthenticatedView(
+            navController = navController,
+            vm = vm,
+            windowSizeClass = windowSizeClass // La pasamos hacia abajo
+        )
     } else {
         UnauthenticatedView(navController = navController, vm = vm)
     }
 }
 
 @Composable
-private fun AuthenticatedView(navController: NavHostController, vm: MainViewModel) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val routeNow = navController.currentBackStackEntryAsState().value?.destination?.route
-    val isDarkMode by vm.isDarkMode.collectAsStateWithLifecycle()
-
+private fun AuthenticatedView(
+    navController: NavHostController,
+    vm: MainViewModel,
+    windowSizeClass: WindowSizeClass
+) {
+    // Decidimos si mostrar el NavRail basado en el ancho de la pantalla
+    val showNavigationRail = windowSizeClass.widthSizeClass > WindowWidthSizeClass.Compact
     val onLogout = { vm.logout() }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(
-                currentRoute = routeNow,
-                isDarkMode = isDarkMode,
-                onToggleDarkMode = { vm.toggleDarkMode() },
-                items = authenticatedDrawerItems(
-                    onHome = {
-                        scope.launch { drawerState.close() }
-                        navController.navigate(Routes.HOME) { launchSingleTop = true }
-                    },
-                    onLogout = {
-                        scope.launch { drawerState.close() }
-                        onLogout()
-                    },
-                    onCatalog = {
-                        scope.launch { drawerState.close() }
-                        navController.navigate(Routes.CATALOG) { launchSingleTop = true }
-                    },
-                    onNews = {
-                        scope.launch { drawerState.close() }
-                        navController.navigate(Routes.NEWS) { launchSingleTop = true }
-                    },
-                    onAccountSettings = {
-                        scope.launch { drawerState.close() }
-                        navController.navigate(Routes.ACCOUNT_SETTINGS) { launchSingleTop = true }
-                    }
-                )
-            )
+    Row {
+        // 1. Muestra el NavigationRail en pantallas medianas y grandes
+        if (showNavigationRail) {
+            AppNavigationRail(navController = navController, items = mainNavItems)
         }
-    ) {
+
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text("Libra Users") },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Abrir menú")
-                        }
-                    },
+                    // El icono de menú ya no es necesario
                     actions = {
-                        IconButton(onClick = { navController.navigate(Routes.HOME) { launchSingleTop = true } }) {
-                            Icon(Icons.Filled.Home, contentDescription = "Home")
-                        }
+                        // El botón de logout se mantiene en la barra superior
                         IconButton(onClick = onLogout) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Logout,
@@ -121,13 +124,19 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         actionIconContentColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.primary
                     )
                 )
+            },
+            // 2. Muestra la Barra Inferior solo en pantallas compactas
+            bottomBar = {
+                if (!showNavigationRail) {
+                    AppBottomBar(navController = navController, items = mainNavItems)
+                }
             }
         ) { innerPadding ->
+            // 3. El contenido de las pantallas (NavHost) se adapta al espacio restante
             NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
@@ -158,12 +167,64 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                     NewsScreen()
                 }
                 composable(Routes.ACCOUNT_SETTINGS) {
+                    // En el futuro, la configuración del modo oscuro se puede mover aquí
                     AccountSettingsScreen(vm = vm)
                 }
             }
         }
     }
 }
+
+@Composable
+private fun AppBottomBar(navController: NavHostController, items: List<NavItem>) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    NavigationBar {
+        items.forEach { item ->
+            NavigationBarItem(
+                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppNavigationRail(navController: NavHostController, items: List<NavItem>) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    NavigationRail {
+        items.forEach { item ->
+            NavigationRailItem(
+                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) }
+            )
+        }
+    }
+}
+
 
 @Composable
 private fun UnauthenticatedView(navController: NavHostController, vm: MainViewModel) {

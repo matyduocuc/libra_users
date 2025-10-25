@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material3:material3-window-size-class:1.2.1")
 
     // Navegación Compose
     implementation(libs.navigation.compose)
@@ -74,6 +75,7 @@ dependencies {
     // ---------- Room (KSP) ----------
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.androidx.material3.window.size.class1)
     ksp(libs.room.compiler)   // ✅ KSP para Room
 
     // ---------- Hilt (KSP) ----------

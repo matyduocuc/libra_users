@@ -2,6 +2,7 @@ package com.empresa.libra_users.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.empresa.libra_users.data.UserPreferencesRepository
 import com.empresa.libra_users.data.local.user.BookEntity
 import com.empresa.libra_users.data.local.user.LoanEntity
 import com.empresa.libra_users.data.local.user.UserEntity
@@ -9,13 +10,17 @@ import com.empresa.libra_users.data.repository.BookRepository
 import com.empresa.libra_users.data.repository.LoanRepository
 import com.empresa.libra_users.data.repository.NotificationRepository
 import com.empresa.libra_users.data.repository.UserRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class LoginUiState(
     val email: String = "",
@@ -81,12 +86,13 @@ data class UpdateUserUiState(
     val verificationError: String? = null
 )
 
-
-class MainViewModel(
+@HiltViewModel
+class MainViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val bookRepository: BookRepository,
     private val loanRepository: LoanRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     // Estados de UI
@@ -102,8 +108,12 @@ class MainViewModel(
     private val _search = MutableStateFlow(SearchUiState())
     val search: StateFlow<SearchUiState> = _search.asStateFlow()
 
-    private val _isLoggedIn = MutableStateFlow(false)
-    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+    val isLoggedIn: StateFlow<Boolean> = userPreferencesRepository.isLoggedIn
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
 
     private val _user = MutableStateFlow<UserEntity?>(null)
     val user: StateFlow<UserEntity?> = _user.asStateFlow()
@@ -238,7 +248,7 @@ class MainViewModel(
                 else it.copy(isSubmitting = false, errorMsg = result.exceptionOrNull()?.message ?: "Credenciales inválidas")
             }
             if (result.isSuccess) {
-                _isLoggedIn.value = true
+                userPreferencesRepository.setLoggedIn(true)
                 _user.value = userRepository.getUserByEmail(s.email.trim())
             }
         }
@@ -249,10 +259,12 @@ class MainViewModel(
     }
 
     fun logout() {
-        _isLoggedIn.value = false
-        _user.value = null
-        _login.update { LoginUiState() }
-        clearSearchResults()
+        viewModelScope.launch {
+            userPreferencesRepository.clearAll()
+            _user.value = null
+            _login.update { LoginUiState() }
+            clearSearchResults()
+        }
     }
 
     fun onRegisterNameChange(value: String) {
