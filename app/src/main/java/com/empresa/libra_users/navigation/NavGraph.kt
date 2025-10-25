@@ -2,12 +2,15 @@
 
 package com.empresa.libra_users.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,6 +21,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -32,6 +36,7 @@ import com.empresa.libra_users.screen.LoginScreen
 import com.empresa.libra_users.screen.RegisterScreen
 import com.empresa.libra_users.ui.theme.components.AppDrawer
 import com.empresa.libra_users.ui.theme.components.authenticatedDrawerItems
+import com.empresa.libra_users.viewmodel.AuthState
 import com.empresa.libra_users.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -40,12 +45,23 @@ fun AppNavGraph(
     navController: NavHostController,
     mainViewModel: MainViewModel
 ) {
-    val isLoggedIn by mainViewModel.isLoggedIn.collectAsStateWithLifecycle()
+    val authState by mainViewModel.authState.collectAsStateWithLifecycle()
 
-    if (isLoggedIn) {
-        AuthenticatedView(navController = navController, vm = mainViewModel)
-    } else {
-        UnauthenticatedView(navController = navController, vm = mainViewModel)
+    when (authState) {
+        AuthState.LOADING -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        AuthState.AUTHENTICATED -> {
+            AuthenticatedView(navController = navController, vm = mainViewModel)
+        }
+        AuthState.UNAUTHENTICATED -> {
+            UnauthenticatedView(navController = navController, vm = mainViewModel)
+        }
     }
 }
 

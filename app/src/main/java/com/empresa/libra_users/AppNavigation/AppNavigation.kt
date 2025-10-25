@@ -2,7 +2,9 @@
 
 package com.empresa.libra_users.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +29,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,6 +49,7 @@ import com.empresa.libra_users.screen.HomeScreen
 import com.empresa.libra_users.screen.LoginScreen
 import com.empresa.libra_users.screen.NewsScreen
 import com.empresa.libra_users.screen.RegisterScreen
+import com.empresa.libra_users.viewmodel.AuthState
 import com.empresa.libra_users.viewmodel.MainViewModel
 
 object Routes {
@@ -80,16 +85,27 @@ fun AppNavigation(
     windowSizeClass: WindowSizeClass // Recibimos la clase de tamaño
 ) {
     val navController = rememberNavController()
-    val isLoggedIn by vm.isLoggedIn.collectAsStateWithLifecycle()
+    val authState by vm.authState.collectAsStateWithLifecycle()
 
-    if (isLoggedIn) {
-        AuthenticatedView(
-            navController = navController,
-            vm = vm,
-            windowSizeClass = windowSizeClass // La pasamos hacia abajo
-        )
-    } else {
-        UnauthenticatedView(navController = navController, vm = vm)
+    when (authState) {
+        AuthState.LOADING -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        AuthState.AUTHENTICATED -> {
+            AuthenticatedView(
+                navController = navController,
+                vm = vm,
+                windowSizeClass = windowSizeClass // La pasamos hacia abajo
+            )
+        }
+        AuthState.UNAUTHENTICATED -> {
+            UnauthenticatedView(navController = navController, vm = vm)
+        }
     }
 }
 

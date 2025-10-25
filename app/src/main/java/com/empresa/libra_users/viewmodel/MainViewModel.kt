@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -86,6 +88,12 @@ data class UpdateUserUiState(
     val verificationError: String? = null
 )
 
+enum class AuthState {
+    LOADING,
+    AUTHENTICATED,
+    UNAUTHENTICATED
+}
+
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val userRepository: UserRepository,
@@ -108,12 +116,8 @@ class MainViewModel @Inject constructor(
     private val _search = MutableStateFlow(SearchUiState())
     val search: StateFlow<SearchUiState> = _search.asStateFlow()
 
-    val isLoggedIn: StateFlow<Boolean> = userPreferencesRepository.isLoggedIn
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
-        )
+    private val _authState = MutableStateFlow(AuthState.LOADING)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     private val _user = MutableStateFlow<UserEntity?>(null)
     val user: StateFlow<UserEntity?> = _user.asStateFlow()
@@ -131,6 +135,42 @@ class MainViewModel @Inject constructor(
     init {
         startCoverRotation()
         loadCategorizedBooks()
+        // Inicia el nuevo flujo de autenticación
+        checkAuthStatus()
+    }
+
+    private fun checkAuthStatus() {
+        userPreferencesRepository.userEmail
+            .onEach { email ->
+                if (email == null) {
+                    // No hay email guardado, el usuario no está autenticado
+                    _authState.value = AuthState.UNAUTHENTICATED
+                    _user.value = null
+                } else {
+                    // Hay un email, cargamos el perfil completo
+                    loadUserSession(email)
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun loadUserSession(email: String) {
+        viewModelScope.launch {
+            try {
+                val userProfile = userRepository.getUserByEmail(email)
+                if (userProfile != null) {
+                    _user.value = userProfile
+                    _authState.value = AuthState.AUTHENTICATED
+                } else {
+                    // El email estaba guardado pero el usuario no se encuentra en la BD
+                    // Esto es un caso anómalo. Forzamos el logout.
+                    logout()
+                }
+            } catch (e: Exception) {
+                // Error al cargar el usuario, forzamos logout
+                logout()
+            }
+        }
     }
 
     private fun startCoverRotation() {
@@ -231,7 +271,7 @@ class MainViewModel @Inject constructor(
         val can = s.emailError == null && s.email.isNotBlank() && s.pass.isNotBlank()
         _login.update { it.copy(canSubmit = can) }
     }
-
+	
     fun submitLogin() {
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
@@ -243,13 +283,20 @@ class MainViewModel @Inject constructor(
                 _login.update { it.copy(isSubmitting = false, errorMsg = e.message ?: "Error de login") }
                 return@launch
             }
-            _login.update {
-                if (result.isSuccess) it.copy(isSubmitting = false, success = true)
-                else it.copy(isSubmitting = false, errorMsg = result.exceptionOrNull()?.message ?: "Credenciales inválidas")
-            }
+
             if (result.isSuccess) {
-                userPreferencesRepository.setLoggedIn(true)
-                _user.value = userRepository.getUserByEmail(s.email.trim())
+                val userEmail = s.email.trim()
+                // 1. Guardamos el email del usuario para persistir la sesión
+                userPreferencesRepository.saveUserEmail(userEmail)
+                // El Flow de checkAuthStatus se encargará automáticamente de cargar
+                // el perfil del usuario y cambiar el estado a AUTHENTICATED.
+
+                // 2. Actualizamos el estado de la pantalla de Login para que la UI de Login desaparezca
+                _login.update { it.copy(isSubmitting = false, success = true) }
+            } else {
+                _login.update {
+                    it.copy(isSubmitting = false, errorMsg = result.exceptionOrNull()?.message ?: "Credenciales inválidas")
+                }
             }
         }
     }
@@ -260,9 +307,12 @@ class MainViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            // Limpiamos la sesión persistente, lo que disparará el flujo de checkAuthStatus
+            // y cambiará el estado a UNAUTHENTICATED.
             userPreferencesRepository.clearAll()
-            _user.value = null
+            // Opcional: limpiar estados locales inmediatamente si es necesario
             _login.update { LoginUiState() }
+            _register.update { RegisterUiState() }
             clearSearchResults()
         }
     }

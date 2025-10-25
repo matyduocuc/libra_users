@@ -3,7 +3,6 @@ package com.empresa.libra_users.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -21,15 +20,19 @@ class UserPreferencesRepository @Inject constructor(@ApplicationContext private 
 
     // 2. Se definen las claves para cada valor que queremos guardar.
     private companion object {
-        val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        // CLAVE ANTIGUA ELIMINADA: val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        val USER_EMAIL = stringPreferencesKey("user_email") // <-- NUEVA CLAVE
         val AUTH_TOKEN = stringPreferencesKey("auth_token")
         val USER_ROLE = stringPreferencesKey("user_role")
     }
 
     // 3. Se exponen los valores como Flows para que la UI pueda reaccionar a los cambios.
-    val isLoggedIn: Flow<Boolean> = context.dataStore.data
+    // FLOW ANTIGUO ELIMINADO: val isLoggedIn: Flow<Boolean> = ...
+
+    // NUEVO FLOW para el email del usuario. Será null si no hay sesión.
+    val userEmail: Flow<String?> = context.dataStore.data
         .map { preferences ->
-            preferences[IS_LOGGED_IN] ?: false
+            preferences[USER_EMAIL]
         }
 
     val authToken: Flow<String?> = context.dataStore.data
@@ -43,9 +46,12 @@ class UserPreferencesRepository @Inject constructor(@ApplicationContext private 
         }
 
     // 4. Se crean funciones suspend para modificar los datos de forma segura.
-    suspend fun setLoggedIn(isLoggedIn: Boolean) {
+    // FUNCIÓN ANTIGUA ELIMINADA: suspend fun setLoggedIn(isLoggedIn: Boolean)
+
+    // NUEVA FUNCIÓN para guardar el email del usuario al hacer login
+    suspend fun saveUserEmail(email: String) {
         context.dataStore.edit { preferences ->
-            preferences[IS_LOGGED_IN] = isLoggedIn
+            preferences[USER_EMAIL] = email
         }
     }
 
@@ -67,4 +73,3 @@ class UserPreferencesRepository @Inject constructor(@ApplicationContext private 
         }
     }
 }
-
