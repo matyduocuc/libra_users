@@ -1,15 +1,34 @@
 package com.empresa.libra_users.screen
 
+import android.Manifest
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.empresa.libra_users.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -17,13 +36,48 @@ fun AccountSettingsScreen(vm: MainViewModel) {
     val updateUserState by vm.updateUserState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    // Cargar los datos del usuario actual cuando la pantalla se muestra por primera vez
+    var showImageSourceSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    // --- LAUNCHERS ---
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> vm.onUpdateUserProfileImageChange(uri) }
+    )
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success) {
+                tempCameraUri?.let { vm.onUpdateUserProfileImageChange(it) }
+            }
+        }
+    )
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                val newUri = createImageUri(context)
+                tempCameraUri = newUri
+                cameraLauncher.launch(newUri)
+            } else {
+                scope.launch {
+                    snackbarHostState.showSnackbar("El permiso de cámara es necesario.")
+                }
+            }
+        }
+    )
+
+    // Cargar datos del usuario al entrar
     LaunchedEffect(Unit) {
         vm.loadCurrentUserData()
     }
 
-    // Mostrar un Snackbar cuando la actualización sea exitosa
+    // Efectos para mostrar Snackbars de éxito o error
     LaunchedEffect(updateUserState.success) {
         if (updateUserState.success) {
             scope.launch {
@@ -32,71 +86,112 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             vm.clearUpdateUserState()
         }
     }
-
-    // Mostrar un Snackbar si hay un error
     LaunchedEffect(updateUserState.errorMsg) {
         updateUserState.errorMsg?.let {
-            scope.launch {
-                snackbarHostState.showSnackbar("Error: $it")
-            }
+            scope.launch { snackbarHostState.showSnackbar("Error: $it") }
             vm.clearUpdateUserState()
         }
     }
 
-    // Si debemos mostrar el diálogo de verificación, lo componemos
+    // Hoja para seleccionar origen de imagen
+    if (showImageSourceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showImageSourceSheet = false },
+            sheetState = sheetState
+        ) {
+            ListItem(
+                headlineContent = { Text("Desde la Galería") },
+                leadingContent = { Icon(Icons.Default.PhotoLibrary, "Galería") },
+                modifier = Modifier.clickable {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showImageSourceSheet = false
+                            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
+                    }
+                }
+            )
+            ListItem(
+                headlineContent = { Text("Tomar Foto") },
+                leadingContent = { Icon(Icons.Default.CameraAlt, "Cámara") },
+                modifier = Modifier.clickable {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showImageSourceSheet = false
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    }
+                }
+            )
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+
     if (updateUserState.showVerificationDialog) {
-        VerificationDialog(
-            vm = vm,
-            onDismiss = { vm.cancelEmailUpdate() }
-        )
+        VerificationDialog(vm = vm, onDismiss = { vm.cancelEmailUpdate() })
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it)
-                .padding(16.dp)
+            modifier = Modifier.fillMaxSize().padding(it).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Configuración de la cuenta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Campo para el ID de usuario (solo lectura)
-            OutlinedTextField(
-                value = updateUserState.userId,
-                onValueChange = {},
-                label = { Text("ID de Usuario") },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true
-            )
-            Spacer(Modifier.height(16.dp))
+            // --- Foto de Perfil ---
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { showImageSourceSheet = true },
+                contentAlignment = Alignment.Center
+            ) {
+                if (updateUserState.profileImageUri != null) {
+                    AsyncImage(
+                        model = Uri.parse(updateUserState.profileImageUri),
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Añadir foto de perfil",
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            TextButton(onClick = { showImageSourceSheet = true }) {
+                Text("Cambiar foto")
+            }
+            Spacer(Modifier.height(24.dp))
 
-            // Campos para el nombre y teléfono (editables)
+            // --- Campos Editables ---
             OutlinedTextField(
                 value = updateUserState.name,
-                onValueChange = { vm.onUpdateUserNameChange(it) },
+                onValueChange = vm::onUpdateUserNameChange,
                 label = { Text("Nombre") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = updateUserState.phone,
-                onValueChange = { vm.onUpdateUserPhoneChange(it) },
+                onValueChange = vm::onUpdateUserPhoneChange,
                 label = { Text("Teléfono") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(16.dp))
-
-            // Sección para el correo electrónico con botón de cambio
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = updateUserState.email,
-                    onValueChange = { vm.onUpdateUserEmailChange(it) },
+                    onValueChange = vm::onUpdateUserEmailChange,
                     label = { Text("Correo electrónico") },
                     modifier = Modifier.weight(1f),
-                    // Se deshabilita si el diálogo de verificación está abierto
                     enabled = !updateUserState.showVerificationDialog
                 )
                 Spacer(Modifier.width(8.dp))
@@ -163,5 +258,15 @@ private fun VerificationDialog(vm: MainViewModel, onDismiss: () -> Unit) {
                 Text("Cancelar")
             }
         }
+    )
+}
+
+// Función de utilidad para crear una URI para la cámara
+private fun createImageUri(context: Context): Uri {
+    val file = File(context.cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.provider",
+        file
     )
 }

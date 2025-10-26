@@ -6,11 +6,7 @@
 
     <!-- Permiso de cámara -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Declarar feature de cámara (no obligatorio) -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:name=".LibraUsersApp"
@@ -42,7 +38,7 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+                android:resource="@xml/provider_paths" /> <!-- Corregido para coincidir con el código -->
         </provider>
 
     </application>

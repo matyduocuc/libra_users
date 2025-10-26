@@ -17,7 +17,7 @@ class UserRepository(
     }
 
     // Register
-    suspend fun register(name: String, email: String, phone: String, pass: String): Result<Long> {
+    suspend fun register(name: String, email: String, phone: String, pass: String, profilePictureUri: String?): Result<Long> {
         val exists = userDao.getByEmail(email) != null
         if (exists) {
             return Result.failure(IllegalArgumentException("Correo ya existente"))
@@ -27,7 +27,8 @@ class UserRepository(
                     name = name,
                     email = email,
                     phone = phone,
-                    password = pass
+                    password = pass,
+                    profilePictureUri = profilePictureUri // Guardamos la foto
                 )
             )
             return Result.success(id)

@@ -1,5 +1,6 @@
 package com.empresa.libra_users.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.empresa.libra_users.data.UserPreferencesRepository
@@ -14,12 +15,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -41,6 +40,7 @@ data class RegisterUiState(
     val phone: String = "",
     val pass: String = "",
     val confirm: String = "",
+    val profileImageUri: String? = null, // Campo para la foto de perfil
     val nameError: String? = null,
     val emailError: String? = null,
     val phoneError: String? = null,
@@ -54,11 +54,7 @@ data class RegisterUiState(
 
 data class HomeUiState(
     val currentCoverIndex: Int = 0,
-    val coverImages: List<String> = listOf(
-        "https://ejemplo.com/cover1.jpg",
-        "https://ejemplo.com/cover2.jpg",
-        "https://ejemplo.com/cover3.jpg"
-    ),
+    val coverImages: List<String> = emptyList(),
     val featuredBooks: List<BookEntity> = emptyList(),
     val categorizedBooks: Map<String, List<BookEntity>> = emptyMap(),
     val isLoading: Boolean = false,
@@ -74,19 +70,27 @@ data class SearchUiState(
 )
 
 data class UpdateUserUiState(
-    val userId: String = "", // ID de usuario para mostrar
+    val userId: String = "",
     val name: String = "",
     val email: String = "",
     val phone: String = "",
+    val profileImageUri: String? = null, // Campo para la foto de perfil
     val isSubmitting: Boolean = false,
     val success: Boolean = false,
     val errorMsg: String? = null,
-    // Campos para el flujo de verificación de 2 pasos
     val showVerificationDialog: Boolean = false,
     val verificationCode: String = "",
     val isVerifying: Boolean = false,
     val verificationError: String? = null
 )
+
+data class CartItem(
+    val book: BookEntity,
+    val loanDays: Int = 7
+) {
+    val price: Double
+        get() = loanDays * 0.15
+}
 
 enum class AuthState {
     LOADING,
@@ -103,7 +107,6 @@ class MainViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    // Estados de UI
     private val _login = MutableStateFlow(LoginUiState())
     val login: StateFlow<LoginUiState> = _login.asStateFlow()
 
@@ -125,7 +128,9 @@ class MainViewModel @Inject constructor(
     private val _updateUserState = MutableStateFlow(UpdateUserUiState())
     val updateUserState: StateFlow<UpdateUserUiState> = _updateUserState.asStateFlow()
 
-    // Estado para el modo oscuro
+    private val _cart = MutableStateFlow<List<CartItem>>(emptyList())
+    val cart: StateFlow<List<CartItem>> = _cart.asStateFlow()
+
     private val _isDarkMode = MutableStateFlow(false)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
@@ -133,9 +138,7 @@ class MainViewModel @Inject constructor(
     private val searchDebounceMillis = 500L
 
     init {
-        startCoverRotation()
-        loadCategorizedBooks()
-        // Inicia el nuevo flujo de autenticación
+        // Quitamos la carga de libros del inicio para mejorar el rendimiento
         checkAuthStatus()
     }
 
@@ -143,11 +146,9 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.userEmail
             .onEach { email ->
                 if (email == null) {
-                    // No hay email guardado, el usuario no está autenticado
                     _authState.value = AuthState.UNAUTHENTICATED
                     _user.value = null
                 } else {
-                    // Hay un email, cargamos el perfil completo
                     loadUserSession(email)
                 }
             }
@@ -161,26 +162,13 @@ class MainViewModel @Inject constructor(
                 if (userProfile != null) {
                     _user.value = userProfile
                     _authState.value = AuthState.AUTHENTICATED
+                    // Cargamos los libros DESPUÉS de confirmar que el usuario está autenticado
+                    loadCategorizedBooks()
                 } else {
-                    // El email estaba guardado pero el usuario no se encuentra en la BD
-                    // Esto es un caso anómalo. Forzamos el logout.
                     logout()
                 }
             } catch (e: Exception) {
-                // Error al cargar el usuario, forzamos logout
                 logout()
-            }
-        }
-    }
-
-    private fun startCoverRotation() {
-        if (_home.value.coverImages.isEmpty()) return
-        viewModelScope.launch {
-            while (true) {
-                delay(5000)
-                _home.update {
-                    it.copy(currentCoverIndex = (it.currentCoverIndex + 1) % it.coverImages.size)
-                }
             }
         }
     }
@@ -207,42 +195,52 @@ class MainViewModel @Inject constructor(
         return bookRepository.getBookById(bookId)
     }
 
+    fun addToCart(book: BookEntity) {
+        _cart.update { currentCart ->
+            if (currentCart.any { it.book.id == book.id }) {
+                currentCart
+            } else {
+                currentCart + CartItem(book = book)
+            }
+        }
+    }
+
+    fun removeFromCart(bookId: Long) {
+        _cart.update { currentCart ->
+            currentCart.filterNot { it.book.id == bookId }
+        }
+    }
+
+    fun updateLoanDays(bookId: Long, days: Int) {
+        _cart.update { currentCart ->
+            currentCart.map {
+                if (it.book.id == bookId) {
+                    it.copy(loanDays = days.coerceIn(1, 30))
+                } else {
+                    it
+                }
+            }
+        }
+    }
+
     fun onSearchQueryChange(newQuery: String) {
         _search.update { it.copy(query = newQuery) }
-
-        if (newQuery.isBlank()) {
-            _search.update { it.copy(results = emptyList(), errorMsg = null, isLoading = false) }
-            searchDebounceJob?.cancel()
-            return
-        }
-
         searchDebounceJob?.cancel()
         searchDebounceJob = viewModelScope.launch {
             delay(searchDebounceMillis)
-            performSearchInternal(_search.value.query)
+            performSearchInternal(newQuery)
         }
     }
 
     fun performSearch() {
-        val currentQuery = _search.value.query.trim()
-        if (currentQuery.isBlank()) {
-            _search.update { it.copy(results = emptyList(), errorMsg = null, isLoading = false) }
-            return
-        }
-        searchDebounceJob?.cancel()
-        performSearchInternal(currentQuery)
+        performSearchInternal(_search.value.query)
     }
 
     private fun performSearchInternal(query: String) {
         viewModelScope.launch {
             _search.update { it.copy(isLoading = true, errorMsg = null, initialSearchPerformed = true) }
             try {
-                val searchResults = try {
-                    bookRepository.searchBooks(query) ?: emptyList()
-                } catch (e: Exception) {
-                    _search.update { it.copy(isLoading = false, errorMsg = "Error al buscar: ${e.message}") }
-                    return@launch
-                }
+                val searchResults = bookRepository.searchBooks(query)
                 _search.update { it.copy(isLoading = false, results = searchResults, errorMsg = null) }
             } catch (e: Exception) {
                 _search.update { it.copy(isLoading = false, errorMsg = "Error al buscar: ${e.message}") }
@@ -271,7 +269,7 @@ class MainViewModel @Inject constructor(
         val can = s.emailError == null && s.email.isNotBlank() && s.pass.isNotBlank()
         _login.update { it.copy(canSubmit = can) }
     }
-	
+
     fun submitLogin() {
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
@@ -286,12 +284,7 @@ class MainViewModel @Inject constructor(
 
             if (result.isSuccess) {
                 val userEmail = s.email.trim()
-                // 1. Guardamos el email del usuario para persistir la sesión
                 userPreferencesRepository.saveUserEmail(userEmail)
-                // El Flow de checkAuthStatus se encargará automáticamente de cargar
-                // el perfil del usuario y cambiar el estado a AUTHENTICATED.
-
-                // 2. Actualizamos el estado de la pantalla de Login para que la UI de Login desaparezca
                 _login.update { it.copy(isSubmitting = false, success = true) }
             } else {
                 _login.update {
@@ -307,14 +300,16 @@ class MainViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            // Limpiamos la sesión persistente, lo que disparará el flujo de checkAuthStatus
-            // y cambiará el estado a UNAUTHENTICATED.
             userPreferencesRepository.clearAll()
-            // Opcional: limpiar estados locales inmediatamente si es necesario
             _login.update { LoginUiState() }
             _register.update { RegisterUiState() }
             clearSearchResults()
+            _cart.value = emptyList()
         }
+    }
+
+    fun onRegisterProfileImageChange(uri: Uri?) {
+        _register.update { it.copy(profileImageUri = uri?.toString()) }
     }
 
     fun onRegisterNameChange(value: String) {
@@ -362,7 +357,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _register.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
             val result = try {
-                userRepository.register(s.name.trim(), s.email.trim(), s.phone.trim(), s.pass)
+                userRepository.register(s.name.trim(), s.email.trim(), s.phone.trim(), s.pass, s.profileImageUri)
             } catch (e: Exception) {
                 _register.update { it.copy(isSubmitting = false, errorMsg = e.message ?: "Error de registro") }
                 return@launch
@@ -401,6 +396,10 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun onUpdateUserProfileImageChange(uri: Uri?) {
+        _updateUserState.update { it.copy(profileImageUri = uri?.toString()) }
+    }
+
     fun onUpdateUserNameChange(name: String) {
         _updateUserState.update { it.copy(name = name) }
     }
@@ -417,10 +416,11 @@ class MainViewModel @Inject constructor(
         _user.value?.let { user ->
             _updateUserState.update {
                 it.copy(
-                    userId = formatUserId(user.id, user.email), // Cargar ID de usuario formateado
+                    userId = formatUserId(user.id, user.email),
                     name = user.name ?: "",
                     email = user.email ?: "",
-                    phone = user.phone ?: ""
+                    phone = user.phone ?: "",
+                    profileImageUri = user.profilePictureUri // Cargar la foto de perfil
                 )
             }
         }
@@ -437,10 +437,13 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _updateUserState.update { it.copy(isSubmitting = true) }
             try {
-                val updatedUser = _user.value?.copy(
-                    name = _updateUserState.value.name,
-                    email = _updateUserState.value.email, // El email se actualizará tras la verificación
-                    phone = _updateUserState.value.phone
+                val currentUser = _user.value
+                val state = _updateUserState.value
+                val updatedUser = currentUser?.copy(
+                    name = state.name,
+                    email = state.email, 
+                    phone = state.phone,
+                    profilePictureUri = state.profileImageUri // Guardar la foto de perfil
                 )
                 if (updatedUser != null) {
                     userRepository.updateUser(updatedUser)
@@ -459,32 +462,22 @@ class MainViewModel @Inject constructor(
         _updateUserState.update { it.copy(success = false, errorMsg = null) }
     }
 
-    // --- Funciones para la verificación de 2 pasos ---
-
     fun onVerificationCodeChange(code: String) {
         _updateUserState.update { it.copy(verificationCode = code, verificationError = null) }
     }
 
     fun initiateEmailUpdate() {
-        // Simulamos que se envía un correo y mostramos el diálogo
         _updateUserState.update { it.copy(showVerificationDialog = true, verificationCode = "", verificationError = null) }
     }
 
     fun confirmEmailUpdate() {
         viewModelScope.launch {
             _updateUserState.update { it.copy(isVerifying = true, verificationError = null) }
-
-            // --- SIMULACIÓN DE VERIFICACIÓN ---
-            // En una app real, aquí llamarías al backend para verificar el código.
-            // Por ahora, aceptamos cualquier código no vacío como válido.
-            delay(1000) // Simular latencia de red
-
+            delay(1000) 
             if (_updateUserState.value.verificationCode.isNotBlank()) {
-                // Código "válido", procedemos a actualizar el email
                 _updateUserState.update { it.copy(isVerifying = false, showVerificationDialog = false) }
-                updateUser() // Llama a la función que guarda los datos
+                updateUser()
             } else {
-                // Código "inválido"
                 _updateUserState.update { it.copy(isVerifying = false, verificationError = "El código no puede estar vacío.") }
             }
         }
@@ -494,7 +487,6 @@ class MainViewModel @Inject constructor(
         _updateUserState.update { it.copy(showVerificationDialog = false, verificationError = null, verificationCode = "") }
     }
 
-    // --- Función para el modo oscuro ---
     fun toggleDarkMode() {
         _isDarkMode.value = !_isDarkMode.value
     }

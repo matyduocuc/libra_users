@@ -25,12 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.navArgument
-import com.empresa.libra_users.screen.BookDetailsScreen
 import com.empresa.libra_users.screen.HomeScreen
 import com.empresa.libra_users.screen.LoginScreen
 import com.empresa.libra_users.screen.RegisterScreen
@@ -119,23 +116,10 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
                 composable("home") {
                     HomeScreen(
                         vm = vm,
-                        onLogout = onLogout,
-                        onBookClick = { bookId ->
-                            navController.navigate("book_details/$bookId")
-                        }
+                        onLogout = onLogout
                     )
                 }
-                composable(
-                    route = "book_details/{bookId}",
-                    arguments = listOf(navArgument("bookId") { type = NavType.LongType })
-                ) { backStackEntry ->
-                    val bookId = backStackEntry.arguments?.getLong("bookId") ?: 0
-                    BookDetailsScreen(
-                        vm = vm,
-                        bookId = bookId,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                // La ruta "book_details" se ha eliminado porque ahora se gestiona con un diálogo.
             }
         }
     }
