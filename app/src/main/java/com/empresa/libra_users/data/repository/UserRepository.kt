@@ -7,10 +7,15 @@ class UserRepository(
     private val userDao: UserDao
 ) {
     // Login
-    suspend fun login(email: String, pass: String): Result<UserEntity> {
+    suspend fun login(email: String, pass: String): Result<String> {
+        // Check for admin credentials first
+        if (email.equals("admin123@gmail.com", ignoreCase = true) && pass == "admin12345678") {
+            return Result.success("ADMIN")
+        }
+
         val user = userDao.getByEmail(email)
         return if (user != null && user.password == pass) {
-            Result.success(user)
+            Result.success("USER") // It's a regular user
         } else {
             Result.failure(IllegalArgumentException("Credenciales Inválidas"))
         }
@@ -18,6 +23,10 @@ class UserRepository(
 
     // Register
     suspend fun register(name: String, email: String, phone: String, pass: String, profilePictureUri: String?): Result<Long> {
+        if (email.equals("admin123@gmail.com", ignoreCase = true)) {
+            return Result.failure(IllegalArgumentException("Este correo no se puede registrar."))
+        }
+
         val exists = userDao.getByEmail(email) != null
         if (exists) {
             return Result.failure(IllegalArgumentException("Correo ya existente"))

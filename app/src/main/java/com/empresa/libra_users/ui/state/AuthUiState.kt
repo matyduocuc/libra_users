@@ -8,7 +8,8 @@ data class LoginUiState(
     val isSubmitting: Boolean = false,
     val canSubmit: Boolean = false,
     val success: Boolean = false,
-    val errorMsg: String? = null
+    val errorMsg: String? = null,
+    val userRole: String? = null
 )
 
 data class RegisterUiState(
@@ -27,4 +28,3 @@ data class RegisterUiState(
     val success: Boolean = false,
     val errorMsg: String? = null
 )
-

@@ -11,6 +11,7 @@ import com.empresa.libra_users.data.repository.BookRepository
 import com.empresa.libra_users.data.repository.LoanRepository
 import com.empresa.libra_users.data.repository.NotificationRepository
 import com.empresa.libra_users.data.repository.UserRepository
+import com.empresa.libra_users.ui.state.LoginUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -21,18 +22,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-
-data class LoginUiState(
-    val email: String = "",
-    val pass: String = "",
-    val emailError: String? = null,
-    val passError: String? = null,
-    val isSubmitting: Boolean = false,
-    val canSubmit: Boolean = false,
-    val success: Boolean = false,
-    val errorMsg: String? = null
-)
 
 data class RegisterUiState(
     val name: String = "",
@@ -164,6 +156,14 @@ class MainViewModel @Inject constructor(
     }
 
     private fun loadUserSession(email: String) {
+        // *** Special case for admin user ***
+        if (email.equals("admin123@gmail.com", ignoreCase = true)) {
+            _user.value = UserEntity(id = -1, name = "Admin", email = email, password = "", phone = "")
+            _authState.value = AuthState.AUTHENTICATED
+            return // Stop execution here for admin
+        }
+
+        // Existing logic for regular users
         viewModelScope.launch {
             try {
                 val userProfile = userRepository.getUserByEmail(email)
@@ -240,9 +240,28 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun confirmAndRemoveFromCart(bookId: Long): Boolean {
-        removeFromCart(bookId)
-        return _cart.value.isEmpty()
+    fun confirmLoanFromCart(cartItem: CartItem) {
+        viewModelScope.launch {
+            _user.value?.let { user ->
+                val userId = user.id
+                val bookId = cartItem.book.id
+                val loanDays = cartItem.loanDays
+
+                val loanDate = LocalDate.now()
+                val dueDate = loanDate.plusDays(loanDays.toLong())
+                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+                registerLoan(
+                    userId = userId,
+                    bookId = bookId,
+                    loanDate = loanDate.format(formatter),
+                    dueDate = dueDate.format(formatter)
+                )
+
+                removeFromCart(bookId)
+                loadActiveLoans()
+            }
+        }
     }
 
     fun updateLoanDays(bookId: Long, days: Int) {
@@ -308,7 +327,7 @@ class MainViewModel @Inject constructor(
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
         viewModelScope.launch {
-            _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
+            _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false, userRole = null) }
             val result = try {
                 userRepository.login(s.email.trim(), s.pass)
             } catch (e: Exception) {
@@ -319,7 +338,7 @@ class MainViewModel @Inject constructor(
             if (result.isSuccess) {
                 val userEmail = s.email.trim()
                 userPreferencesRepository.saveUserEmail(userEmail)
-                _login.update { it.copy(isSubmitting = false, success = true) }
+                _login.update { it.copy(isSubmitting = false, success = true, userRole = result.getOrNull()) }
             } else {
                 _login.update {
                     it.copy(isSubmitting = false, errorMsg = result.exceptionOrNull()?.message ?: "Credenciales inválidas")
@@ -329,7 +348,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun clearLoginResult() {
-        _login.update { it.copy(success = false, errorMsg = null) }
+        _login.update { it.copy(success = false, errorMsg = null, userRole = null) }
     }
 
     fun logout() {

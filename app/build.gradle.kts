@@ -35,9 +35,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
 
-    buildFeatures { compose = true }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        compose = true
+    }
 }
 
 dependencies {
@@ -50,19 +55,20 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.material3:material3-window-size-class:1.2.1")
 
-    // Navegación Compose
+    // ---------- Navegación Compose ----------
     implementation(libs.navigation.compose)
 
-    // Lifecycle para Compose
+    // ---------- Lifecycle para Compose ----------
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
 
     // ---------- Corrutinas / util ----------
     implementation(libs.coroutines.android)
 
-    // (Opcional) Red / almacenamiento si los usas
+    // ---------- Red / almacenamiento ----------
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp.core)
@@ -75,12 +81,11 @@ dependencies {
     // ---------- Room (KSP) ----------
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.androidx.material3.window.size.class1)
-    ksp(libs.room.compiler)   // ✅ KSP para Room
+    ksp(libs.room.compiler)
 
     // ---------- Hilt (KSP) ----------
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)      // ✅ KSP para Hilt
+    ksp(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // ---------- Tests / Debug ----------
@@ -92,10 +97,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("io.coil-kt:coil-compose:2.7.0")
-
 }
 
-// KSP para Room (opcional, para exportar esquemas)
+// ---------- KSP para Room ----------
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }

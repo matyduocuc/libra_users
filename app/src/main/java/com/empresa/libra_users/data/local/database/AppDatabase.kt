@@ -15,7 +15,7 @@ import com.empresa.libra_users.data.local.user.UserEntity
 
 @Database(
     entities = [UserEntity::class, BookEntity::class, LoanEntity::class, NotificationEntity::class],
-    version = 1,
+    version = 2, // VERSIÓN AUMENTADA
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,11 +31,13 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                // CAMBIO: Se usa inMemoryDatabaseBuilder para que la base de datos no sea persistente
-                val instance = Room.inMemoryDatabaseBuilder(
+                val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    AppDatabase::class.java
-                ).build()
+                    AppDatabase::class.java,
+                    "libra_users_db" // Nombre del archivo de la base de datos
+                )
+                .fallbackToDestructiveMigration() // Permite recrear la BD si la versión cambia
+                .build()
                 INSTANCE = instance
                 instance
             }

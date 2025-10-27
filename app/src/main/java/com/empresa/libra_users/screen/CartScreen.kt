@@ -41,13 +41,9 @@ fun CartScreen(vm: MainViewModel, navController: NavController) {
                     cartItem = cartItem,
                     onRemove = { vm.removeFromCart(cartItem.book.id) },
                     onDaysChange = { days -> vm.updateLoanDays(cartItem.book.id, days) },
-                    onConfirmLoan = {
-                        val isCartNowEmpty = vm.confirmAndRemoveFromCart(cartItem.book.id)
-                        if (isCartNowEmpty) {
-                            navController.navigate(Routes.HOME) {
-                                popUpTo(Routes.CART) { inclusive = true }
-                            }
-                        }
+                    onConfirmLoan = { 
+                        vm.confirmLoanFromCart(cartItem)
+                        // Optionally, navigate away or show a confirmation message
                     }
                 )
             }

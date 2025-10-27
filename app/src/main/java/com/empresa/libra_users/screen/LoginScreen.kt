@@ -16,21 +16,19 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.empresa.libra_users.ui.state.LoginUiState
 import com.empresa.libra_users.viewmodel.MainViewModel
-import com.empresa.libra_users.viewmodel.LoginUiState
 
 @Composable
 fun LoginScreen(
-    onLoginOkNavigateHome: () -> Unit,
     onGoRegister: () -> Unit,
-    vm: MainViewModel            // ← AHORA llega por parámetro, sin Hilt
+    vm: MainViewModel
 ) {
     val state: LoginUiState by vm.login.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.success) {
         if (state.success) {
             vm.clearLoginResult()
-            onLoginOkNavigateHome()
         }
     }
 

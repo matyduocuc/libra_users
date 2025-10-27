@@ -27,21 +27,26 @@ class AuthRepository @Inject constructor() {
     // Simulación de una tabla de usuarios en una base de datos.
     // En una app real, esta lista no existiría; los datos se obtendrían de una fuente externa.
     private val users = mutableListOf(
-        DemoUser(name = "Demo User", email = "demo@duoc.cl", phone = "912345678", pass = "Demo123!")
+        DemoUser(name = "Demo User", email = "demo@duoc.cl", phone = "912345678", pass = "Demo123!"),
+        DemoUser(name = "Admin User", email = "admin123@gmail.com", phone = "000000000", pass = "admin12345678")
     )
 
     /**
      * Simula el proceso de inicio de sesión.
      * @param email El correo del usuario.
      * @param pass La contraseña del usuario.
-     * @return Result<Unit> que indica éxito (Success) o fracaso (Failure) con un mensaje.
+     * @return Result<String> que indica éxito (Success) con el rol del usuario ("USER" o "ADMIN") o fracaso (Failure) con un mensaje.
      */
-    suspend fun login(email: String, pass: String): Result<Unit> {
+    suspend fun login(email: String, pass: String): Result<String> {
         delay(800) // Simular la latencia de una llamada de red.
         val user = users.firstOrNull { it.email.equals(email, ignoreCase = true) }
 
         return if (user != null && user.pass == pass) {
-            Result.success(Unit) // Éxito: las credenciales son correctas.
+            if (user.email.equals("admin123@gmail.com", ignoreCase = true)) {
+                Result.success("ADMIN") // Éxito: es admin.
+            } else {
+                Result.success("USER") // Éxito: es usuario normal.
+            }
         } else {
             Result.failure(Exception("Credenciales inválidas. Inténtalo de nuevo.")) // Fracaso.
         }
@@ -65,4 +70,3 @@ class AuthRepository @Inject constructor() {
         }
     }
 }
-

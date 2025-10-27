@@ -47,7 +47,7 @@ class AuthViewModel @Inject constructor(
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
         viewModelScope.launch {
-            _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
+            _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false, userRole = null) }
 
             // Delegamos la lógica al repositorio
             val result = authRepository.login(s.email, s.pass)
@@ -56,7 +56,8 @@ class AuthViewModel @Inject constructor(
                 it.copy(
                     isSubmitting = false,
                     success = result.isSuccess,
-                    errorMsg = result.exceptionOrNull()?.message
+                    errorMsg = result.exceptionOrNull()?.message,
+                    userRole = result.getOrNull()
                 )
             }
         }
@@ -121,7 +122,7 @@ class AuthViewModel @Inject constructor(
 
     // --- FUNCIONES DE LIMPIEZA Y CÁLCULO (sin cambios) ---
     fun clearLoginResult() {
-        _login.update { it.copy(success = false, errorMsg = null) }
+        _login.update { it.copy(success = false, errorMsg = null, userRole = null) }
     }
 
     private fun recomputeLoginCanSubmit() {
