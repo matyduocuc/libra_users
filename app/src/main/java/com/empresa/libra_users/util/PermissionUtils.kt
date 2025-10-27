@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat
 @Composable
 fun RequestPermissions(onPermissionsGranted: @Composable () -> Unit) {
     val context = LocalContext.current
+    // Remove CAMERA permission from initial request
     val permissionsToRequest = arrayOf(
         Manifest.permission.POST_NOTIFICATIONS,
         Manifest.permission.RECORD_AUDIO

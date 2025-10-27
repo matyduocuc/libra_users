@@ -15,14 +15,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.empresa.libra_users.navigation.Routes
 import com.empresa.libra_users.viewmodel.CartItem
 import com.empresa.libra_users.viewmodel.MainViewModel
 import java.text.NumberFormat
 
 @Composable
-fun CartScreen(vm: MainViewModel) {
+fun CartScreen(vm: MainViewModel, navController: NavController) {
     val cartItems by vm.cart.collectAsStateWithLifecycle()
 
     if (cartItems.isEmpty()) {
@@ -35,13 +37,17 @@ fun CartScreen(vm: MainViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(cartItems, key = { it.book.id }) { cartItem ->
-                CartItemCard( 
+                CartItemCard(
                     cartItem = cartItem,
                     onRemove = { vm.removeFromCart(cartItem.book.id) },
                     onDaysChange = { days -> vm.updateLoanDays(cartItem.book.id, days) },
-                    onConfirmLoan = { 
-                        // Aquí iría la lógica para confirmar el préstamo
-                        vm.removeFromCart(cartItem.book.id) // Lo quitamos del carrito al confirmar
+                    onConfirmLoan = {
+                        val isCartNowEmpty = vm.confirmAndRemoveFromCart(cartItem.book.id)
+                        if (isCartNowEmpty) {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(Routes.CART) { inclusive = true }
+                            }
+                        }
                     }
                 )
             }
@@ -82,7 +88,7 @@ private fun CartItemCard(
                     steps = 28 // 30-1-1 = 28 steps
                 )
                 Text("Precio: ${NumberFormat.getCurrencyInstance().format(cartItem.price)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                
+
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = onConfirmLoan, modifier = Modifier.fillMaxWidth()) {
                     Text("Confirmar Préstamo")

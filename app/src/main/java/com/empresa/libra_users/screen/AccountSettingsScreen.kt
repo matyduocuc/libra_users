@@ -2,7 +2,9 @@ package com.empresa.libra_users.screen
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.empresa.libra_users.viewmodel.MainViewModel
@@ -41,6 +44,7 @@ fun AccountSettingsScreen(vm: MainViewModel) {
     var showImageSourceSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var showPermissionRationaleDialog by remember { mutableStateOf(false) }
 
     // --- LAUNCHERS ---
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -65,9 +69,7 @@ fun AccountSettingsScreen(vm: MainViewModel) {
                 tempCameraUri = newUri
                 cameraLauncher.launch(newUri)
             } else {
-                scope.launch {
-                    snackbarHostState.showSnackbar("El permiso de cámara es necesario.")
-                }
+                showPermissionRationaleDialog = true
             }
         }
     )
@@ -126,6 +128,14 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             Spacer(Modifier.height(32.dp))
         }
     }
+    
+    if (showPermissionRationaleDialog) {
+        PermissionRationaleDialog(
+            onDismiss = { showPermissionRationaleDialog = false },
+            onConfirm = { openAppSettings(context) }
+        )
+    }
+
 
     if (updateUserState.showVerificationDialog) {
         VerificationDialog(vm = vm, onDismiss = { vm.cancelEmailUpdate() })
@@ -152,7 +162,7 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             ) {
                 if (updateUserState.profileImageUri != null) {
                     AsyncImage(
-                        model = Uri.parse(updateUserState.profileImageUri),
+                        model = updateUserState.profileImageUri?.toUri(),
                         contentDescription = "Foto de perfil",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -212,6 +222,34 @@ fun AccountSettingsScreen(vm: MainViewModel) {
         }
     }
 }
+
+@Composable
+private fun PermissionRationaleDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Permiso Requerido") },
+        text = { Text("Para tomar una foto de perfil, es necesario que concedas el permiso de acceso a la cámara. Por favor, actívalo en la configuración de la aplicación.") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Ir a Configuración")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+private fun openAppSettings(context: Context) {
+    val intent = Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", context.packageName, null)
+    )
+    context.startActivity(intent)
+}
+
 
 @Composable
 private fun VerificationDialog(vm: MainViewModel, onDismiss: () -> Unit) {

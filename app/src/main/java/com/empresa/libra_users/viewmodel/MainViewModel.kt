@@ -210,6 +210,12 @@ class MainViewModel @Inject constructor(
             currentCart.filterNot { it.book.id == bookId }
         }
     }
+    fun confirmAndRemoveFromCart(bookId: Long): Boolean {
+        // Aquí podría ir la lógica de confirmar el préstamo en el backend
+        removeFromCart(bookId)
+        return _cart.value.isEmpty()
+    }
+
 
     fun updateLoanDays(bookId: Long, days: Int) {
         _cart.update { currentCart ->

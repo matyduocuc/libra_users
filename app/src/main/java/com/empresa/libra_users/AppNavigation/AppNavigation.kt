@@ -153,7 +153,7 @@ private fun AuthenticatedView(
                     AccountSettingsScreen(vm = vm)
                 }
                 composable(Routes.CART) {
-                    CartScreen(vm = vm)
+                    CartScreen(vm = vm, navController = navController)
                 }
             }
         }
