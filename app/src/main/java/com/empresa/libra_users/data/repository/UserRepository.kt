@@ -51,4 +51,11 @@ class UserRepository(
     suspend fun updateUser(user: UserEntity) {
         userDao.update(user)
     }
+
+    /**
+     * Counts all users. For the admin dashboard.
+     */
+    suspend fun countUsers(): Int {
+        return userDao.countUsers()
+    }
 }

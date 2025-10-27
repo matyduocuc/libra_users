@@ -21,6 +21,13 @@ interface UserDao {
     @Query("SELECT COUNT(*) FROM users")
     suspend fun count(): Int
 
+    /**
+     * Counts all users in the users table.
+     * Added for the admin dashboard as per specific requirements.
+     */
+    @Query("SELECT COUNT(*) FROM users")
+    suspend fun countUsers(): Int
+
     // Obtener todos los usuarios
     @Query("SELECT * FROM users ORDER BY id ASC")
     suspend fun getAll(): List<UserEntity>

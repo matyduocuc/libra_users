@@ -10,5 +10,11 @@ class LoanRepository(private val loanDao: LoanDao) {
     suspend fun getLoansByUser(userId: Long): List<LoanEntity> = loanDao.getLoansByUser(userId)
     suspend fun update(loan: LoanEntity) = loanDao.update(loan)
     suspend fun countActiveLoans(): Int = loanDao.countActiveLoans()
-}
 
+    /**
+     * Counts all loans. For the admin dashboard.
+     */
+    suspend fun countAllLoans(): Int {
+        return loanDao.countAllLoans()
+    }
+}

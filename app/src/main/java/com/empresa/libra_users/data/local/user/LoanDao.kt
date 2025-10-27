@@ -31,4 +31,11 @@ interface LoanDao {
     // Contar los préstamos activos
     @Query("SELECT COUNT(*) FROM loans WHERE status = 'Active'")
     suspend fun countActiveLoans(): Int
+
+    /**
+     * Counts all loans in the loans table.
+     * Added for the admin dashboard as per specific requirements.
+     */
+    @Query("SELECT COUNT(*) FROM loans")
+    suspend fun countAllLoans(): Int
 }
