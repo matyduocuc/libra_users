@@ -11,6 +11,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -29,6 +31,7 @@ import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.empresa.libra_users.viewmodel.ActiveLoanDetails
 import com.empresa.libra_users.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -37,6 +40,7 @@ import java.io.File
 @Composable
 fun AccountSettingsScreen(vm: MainViewModel) {
     val updateUserState by vm.updateUserState.collectAsStateWithLifecycle()
+    val activeLoans by vm.activeLoans.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -74,9 +78,10 @@ fun AccountSettingsScreen(vm: MainViewModel) {
         }
     )
 
-    // Cargar datos del usuario al entrar
+    // Cargar datos del usuario y préstamos al entrar
     LaunchedEffect(Unit) {
         vm.loadCurrentUserData()
+        vm.loadActiveLoans()
     }
 
     // Efectos para mostrar Snackbars de éxito o error
@@ -135,7 +140,6 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             onConfirm = { openAppSettings(context) }
         )
     }
-
 
     if (updateUserState.showVerificationDialog) {
         VerificationDialog(vm = vm, onDismiss = { vm.cancelEmailUpdate() })
@@ -219,6 +223,41 @@ fun AccountSettingsScreen(vm: MainViewModel) {
             ) {
                 Text(if (updateUserState.isSubmitting) "Guardando..." else "Guardar Cambios")
             }
+            
+            // --- Préstamos Activos ---
+            if (activeLoans.isNotEmpty()) {
+                Spacer(Modifier.height(24.dp))
+                Text("Mis Préstamos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    items(activeLoans) { loanDetails ->
+                        ActiveLoanCard(loanDetails = loanDetails)
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveLoanCard(loanDetails: ActiveLoanDetails) {
+    Card(elevation = CardDefaults.cardElevation(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = loanDetails.book.coverUrl,
+                contentDescription = loanDetails.book.title,
+                modifier = Modifier.width(60.dp).aspectRatio(0.7f),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(loanDetails.book.title, fontWeight = FontWeight.Bold)
+                Text("Devolver antes del: ${loanDetails.loan.dueDate}", style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -249,7 +288,6 @@ private fun openAppSettings(context: Context) {
     )
     context.startActivity(intent)
 }
-
 
 @Composable
 private fun VerificationDialog(vm: MainViewModel, onDismiss: () -> Unit) {
@@ -299,7 +337,6 @@ private fun VerificationDialog(vm: MainViewModel, onDismiss: () -> Unit) {
     )
 }
 
-// Función de utilidad para crear una URI para la cámara
 private fun createImageUri(context: Context): Uri {
     val file = File(context.cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
     return FileProvider.getUriForFile(

@@ -92,6 +92,12 @@ data class CartItem(
         get() = loanDays * 0.15
 }
 
+// Data class for combined loan and book details
+data class ActiveLoanDetails(
+    val book: BookEntity,
+    val loan: LoanEntity
+)
+
 enum class AuthState {
     LOADING,
     AUTHENTICATED,
@@ -131,6 +137,9 @@ class MainViewModel @Inject constructor(
     private val _cart = MutableStateFlow<List<CartItem>>(emptyList())
     val cart: StateFlow<List<CartItem>> = _cart.asStateFlow()
 
+    private val _activeLoans = MutableStateFlow<List<ActiveLoanDetails>>(emptyList())
+    val activeLoans: StateFlow<List<ActiveLoanDetails>> = _activeLoans.asStateFlow()
+
     private val _isDarkMode = MutableStateFlow(false)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
@@ -138,7 +147,6 @@ class MainViewModel @Inject constructor(
     private val searchDebounceMillis = 500L
 
     init {
-        // Quitamos la carga de libros del inicio para mejorar el rendimiento
         checkAuthStatus()
     }
 
@@ -162,8 +170,8 @@ class MainViewModel @Inject constructor(
                 if (userProfile != null) {
                     _user.value = userProfile
                     _authState.value = AuthState.AUTHENTICATED
-                    // Cargamos los libros DESPUÉS de confirmar que el usuario está autenticado
                     loadCategorizedBooks()
+                    loadActiveLoans() // Load loans when user session is loaded
                 } else {
                     logout()
                 }
@@ -191,6 +199,27 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun loadActiveLoans() {
+        viewModelScope.launch {
+            _user.value?.let { user ->
+                try {
+                    val loans = loanRepository.getLoansByUser(user.id)
+                    val loanDetails = loans
+                        .filter { it.status == "Active" } // Filter for active loans
+                        .mapNotNull { loan ->
+                            bookRepository.getBookById(loan.bookId)?.let { book ->
+                                ActiveLoanDetails(book, loan)
+                            }
+                        }
+                    _activeLoans.value = loanDetails
+                } catch (e: Exception) {
+                    _home.update { it.copy(errorMsg = "Error al cargar préstamos: ${e.message}") }
+                }
+            }
+        }
+    }
+
+
     suspend fun getBookById(bookId: Long): BookEntity? {
         return bookRepository.getBookById(bookId)
     }
@@ -210,12 +239,11 @@ class MainViewModel @Inject constructor(
             currentCart.filterNot { it.book.id == bookId }
         }
     }
+
     fun confirmAndRemoveFromCart(bookId: Long): Boolean {
-        // Aquí podría ir la lógica de confirmar el préstamo en el backend
         removeFromCart(bookId)
         return _cart.value.isEmpty()
     }
-
 
     fun updateLoanDays(bookId: Long, days: Int) {
         _cart.update { currentCart ->
@@ -311,6 +339,7 @@ class MainViewModel @Inject constructor(
             _register.update { RegisterUiState() }
             clearSearchResults()
             _cart.value = emptyList()
+            _activeLoans.value = emptyList()
         }
     }
 
