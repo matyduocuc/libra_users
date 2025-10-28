@@ -3,40 +3,27 @@ package com.empresa.libra_users.viewmodel.admin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.empresa.libra_users.data.local.user.BookEntity
+import com.empresa.libra_users.data.local.user.LoanEntity
+import com.empresa.libra_users.data.local.user.UserEntity
 import com.empresa.libra_users.data.repository.BookRepository
 import com.empresa.libra_users.data.repository.LoanRepository
 import com.empresa.libra_users.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
-/**
- * Data class representing the state for the admin dashboard home screen.
- */
-data class AdminDashboardUiState(
-    val totalBooks: Int = 0,
-    val totalUsers: Int = 0,
-    val pendingLoans: Int = 0,
-    val totalLoans: Int = 0,
-    val isLoading: Boolean = true,
-    val error: String? = null
-)
-
-/**
- * Data class representing the state for the book management screen.
- */
-data class AdminBooksUiState(
-    val books: List<BookEntity> = emptyList(),
-    val isLoading: Boolean = true,
-    val error: String? = null
-)
+// --- Data classes para los estados de la UI ---
+data class AdminDashboardUiState(val totalBooks: Int = 0, val totalUsers: Int = 0, val pendingLoans: Int = 0, val totalLoans: Int = 0, val isLoading: Boolean = true, val error: String? = null)
+data class AdminBooksUiState(val books: List<BookEntity> = emptyList(), val isLoading: Boolean = true, val error: String? = null)
+data class AdminUsersUiState(val users: List<UserEntity> = emptyList(), val isLoading: Boolean = true, val error: String? = null)
+data class LoanDetails(val loan: LoanEntity, val book: BookEntity?, val user: UserEntity?)
+data class AdminLoansUiState(val loans: List<LoanDetails> = emptyList(), val isLoading: Boolean = true, val error: String? = null)
+data class BookLoanStats(val book: BookEntity, val loanCount: Int)
+data class UserLoanStats(val user: UserEntity, val loanCount: Int)
+data class LibraryStatus(val available: Int, val loaned: Int, val damaged: Int)
+data class AdminReportsUiState(val topBooks: List<BookLoanStats> = emptyList(), val topUsers: List<UserLoanStats> = emptyList(), val libraryStatus: LibraryStatus = LibraryStatus(0, 0, 0), val isLoading: Boolean = true, val error: String? = null)
 
 @HiltViewModel
 class AdminDashboardViewModel @Inject constructor(
@@ -51,124 +38,105 @@ class AdminDashboardViewModel @Inject constructor(
     private val _booksUiState = MutableStateFlow(AdminBooksUiState())
     val booksUiState: StateFlow<AdminBooksUiState> = _booksUiState.asStateFlow()
 
+    private val _usersUiState = MutableStateFlow(AdminUsersUiState())
+    val usersUiState: StateFlow<AdminUsersUiState> = _usersUiState.asStateFlow()
+
+    private val _loansUiState = MutableStateFlow(AdminLoansUiState())
+    val loansUiState: StateFlow<AdminLoansUiState> = _loansUiState.asStateFlow()
+
+    private val _reportsUiState = MutableStateFlow(AdminReportsUiState())
+    val reportsUiState: StateFlow<AdminReportsUiState> = _reportsUiState.asStateFlow()
+
     init {
         loadDashboardTotals()
         loadBooks()
+        loadUsers()
+        loadLoanDetails()
+        loadReports()
     }
 
-    /**
-     * Loads the total counts from the repositories and updates the UI state.
-     */
     fun loadDashboardTotals() {
-        _dashboardUiState.update { it.copy(isLoading = true) }
-
         viewModelScope.launch {
+            _dashboardUiState.update { it.copy(isLoading = true) }
             try {
-                val totalBooks = bookRepository.count()
-                val totalUsers = userRepository.countUsers()
-                val pendingLoans = loanRepository.countActiveLoans()
-                val totalLoans = loanRepository.countAllLoans()
-
                 _dashboardUiState.update {
-                    it.copy(
-                        totalBooks = totalBooks,
-                        totalUsers = totalUsers,
-                        pendingLoans = pendingLoans,
-                        totalLoans = totalLoans,
-                        isLoading = false
-                    )
+                    it.copy(totalBooks = bookRepository.count(), totalUsers = userRepository.countUsers(), pendingLoans = loanRepository.countActiveLoans(), totalLoans = loanRepository.countAllLoans(), isLoading = false)
                 }
-            } catch (_: Exception) {
-                _dashboardUiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Error al cargar los totales."
-                    )
-                }
+            } catch (e: Exception) {
+                _dashboardUiState.update { it.copy(isLoading = false, error = "Error al cargar totales: ${e.message}") }
             }
         }
     }
 
-    /**
-     * Loads the list of books from the repository and updates the book management UI state.
-     */
     fun loadBooks() {
-        _booksUiState.update { it.copy(isLoading = true, error = null) }
+        bookRepository.getAllBooks()
+            .onStart { _booksUiState.update { it.copy(isLoading = true) } }
+            .catch { e -> _booksUiState.update { it.copy(isLoading = false, error = e.message) } }
+            .onEach { books -> _booksUiState.update { it.copy(isLoading = false, books = books) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun loadUsers() {
+        userRepository.getUsers()
+            .onStart { _usersUiState.update { it.copy(isLoading = true) } }
+            .catch { e -> _usersUiState.update { it.copy(isLoading = false, error = e.message) } }
+            .onEach { users -> _usersUiState.update { it.copy(isLoading = false, users = users) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun loadLoanDetails() {
         viewModelScope.launch {
+            loanRepository.getAllLoansFlow()
+                .onStart { _loansUiState.update { it.copy(isLoading = true) } }
+                .catch { e -> _loansUiState.update { it.copy(isLoading = false, error = e.message) } }
+                .collect { loans ->
+                    val details = loans.map { loan ->
+                        LoanDetails(loan = loan, book = bookRepository.getBookById(loan.bookId), user = userRepository.getUserById(loan.userId))
+                    }
+                    _loansUiState.update { it.copy(isLoading = false, loans = details) }
+                }
+        }
+    }
+
+    fun loadReports() {
+        viewModelScope.launch {
+            _reportsUiState.update { it.copy(isLoading = true) }
             try {
-                // Assuming getAllBooks is a suspend function returning a List
-                val books = bookRepository.getAllBooks()
-                _booksUiState.update {
-                    it.copy(
-                        books = books,
-                        isLoading = false
-                    )
-                }
-            } catch (_: Exception) {
-                _booksUiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Error al cargar los libros."
-                    )
-                }
+                val allLoans = loanRepository.getAllLoans()
+                val allBooks = bookRepository.getAllBooks().first()
+                val allUsers = userRepository.getUsers().first()
+
+                val topBooks = allLoans.groupBy { it.bookId }.mapNotNull { (bookId, loans) -> allBooks.find { it.id == bookId }?.let { BookLoanStats(it, loans.size) } }.sortedByDescending { it.loanCount }.take(5)
+                val topUsers = allLoans.groupBy { it.userId }.mapNotNull { (userId, loans) -> allUsers.find { it.id == userId }?.let { UserLoanStats(it, loans.size) } }.sortedByDescending { it.loanCount }.take(5)
+                val libraryStatus = LibraryStatus(available = allBooks.count { it.status == "Available" }, loaned = allBooks.count { it.status == "Loaned" }, damaged = allBooks.count { it.status == "Damaged" })
+
+                _reportsUiState.update { it.copy(isLoading = false, topBooks = topBooks, topUsers = topUsers, libraryStatus = libraryStatus) }
+            } catch (e: Exception) {
+                _reportsUiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }
 
-    /**
-     * Adds a new book to the database and refreshes the book list.
-     */
-    fun addBook(
-        title: String,
-        author: String,
-        isbn: String = "N/A",
-        publisher: String = "N/A",
-        categoryId: Int = 1
-    ) {
-        viewModelScope.launch {
-            _booksUiState.update { it.copy(isLoading = true, error = null) }
-            try {
-                // Campos obligatorios reales
-                val publishDateMillis = System.currentTimeMillis()
-                val inventoryCode = "INV-${publishDateMillis.toString().takeLast(6)}"
-                val publishDateStr = Instant.ofEpochMilli(publishDateMillis)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-                    .format(DateTimeFormatter.ISO_LOCAL_DATE)
-
-                val newBook = BookEntity(
-                    title = title,
-                    author = author,
-                    categoryId = categoryId.toLong(),
-                    isbn = isbn,
-                    publisher = publisher,
-                    publishDate = publishDateStr,
-                    inventoryCode = inventoryCode,
-                    status = "Available"
-                )
-
-                bookRepository.insert(newBook)
-                loadBooks()  // refrescar lista tras la inserción
-            } catch (_: Exception) {
-                _booksUiState.update { it.copy(isLoading = false, error = "Error al añadir el libro.") }
-            }
+    fun getLoansWithDetailsForUser(userId: Long): Flow<List<LoanDetails>> {
+        return loanRepository.getLoansByUser(userId).map { loans ->
+            loans.mapNotNull { loan -> bookRepository.getBookById(loan.bookId)?.let { LoanDetails(loan = loan, book = it, user = null) } }
         }
     }
 
-    /**
-     * Deletes a book from the database and refreshes the book list.
-     */
-    fun deleteBook(book: BookEntity) {
+    fun updateUser(user: UserEntity) = viewModelScope.launch { userRepository.updateUser(user) }
+
+    fun addBook(title: String, author: String, coverUrl: String, isbn: String, publisher: String, categoryId: Int, homeSection: String) = viewModelScope.launch {
+        val newBook = BookEntity(title = title, author = author, coverUrl = coverUrl, categoryId = categoryId.toLong(), isbn = isbn, publisher = publisher, homeSection = homeSection, publishDate = "N/A", inventoryCode = "N/A", status = "Available")
+        bookRepository.insert(newBook)
+    }
+
+    fun deleteBook(book: BookEntity) = viewModelScope.launch { bookRepository.delete(book) }
+
+    fun markLoanAsReturned(loan: LoanEntity) {
         viewModelScope.launch {
-            _booksUiState.update { it.copy(isLoading = true) }
-            try {
-                bookRepository.delete(book)
-                loadBooks() // Refresh the list after deletion
-            } catch (_: Exception) {
-                _booksUiState.update {
-                    it.copy(isLoading = false, error = "Error al eliminar el libro.")
-                }
-            }
+            val updatedLoan = loan.copy(status = "Returned", returnDate = java.time.LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
+            loanRepository.update(updatedLoan)
+            bookRepository.getBookById(loan.bookId)?.let { bookRepository.update(it.copy(status = "Available")) }
         }
     }
 }

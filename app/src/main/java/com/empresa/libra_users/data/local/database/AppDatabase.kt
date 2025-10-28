@@ -1,6 +1,7 @@
 package com.empresa.libra_users.data.local.database
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -15,8 +16,11 @@ import com.empresa.libra_users.data.local.user.UserEntity
 
 @Database(
     entities = [UserEntity::class, BookEntity::class, LoanEntity::class, NotificationEntity::class],
-    version = 2, // VERSIÓN AUMENTADA
-    exportSchema = false
+    version = 9, // Versión actualizada para la migración
+    exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 8, to = 9)
+    ]
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -34,10 +38,9 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "libra_users_db" // Nombre del archivo de la base de datos
+                    "libra_users_db"
                 )
-                .fallbackToDestructiveMigration() // Permite recrear la BD si la versión cambia
-                .build()
+                .build() // Ya no se necesita fallbackToDestructiveMigration
                 INSTANCE = instance
                 instance
             }

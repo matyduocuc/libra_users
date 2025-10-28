@@ -15,12 +15,7 @@ import com.empresa.libra_users.ui.state.LoginUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -140,6 +135,7 @@ class MainViewModel @Inject constructor(
 
     init {
         checkAuthStatus()
+        loadCategorizedBooks()
     }
 
     private fun checkAuthStatus() {
@@ -170,7 +166,6 @@ class MainViewModel @Inject constructor(
                 if (userProfile != null) {
                     _user.value = userProfile
                     _authState.value = AuthState.AUTHENTICATED
-                    loadCategorizedBooks()
                     loadActiveLoans() // Load loans when user session is loaded
                 } else {
                     logout()
@@ -183,38 +178,46 @@ class MainViewModel @Inject constructor(
 
     fun loadCategorizedBooks() {
         viewModelScope.launch {
-            _home.update { it.copy(isLoading = true, errorMsg = null) }
-            try {
-                val categorized = bookRepository.getCategorizedBooks()
-                _home.update {
-                    it.copy(
-                        isLoading = false,
-                        categorizedBooks = categorized,
-                        featuredBooks = categorized.values.flatten().distinct().take(6)
-                    )
+            bookRepository.getAllBooks()
+                .onStart { _home.update { it.copy(isLoading = true, errorMsg = null) } }
+                .catch { e -> _home.update { it.copy(isLoading = false, errorMsg = "Error al cargar libros: ${e.message}") } }
+                .collect { books ->
+                    val categorized = books.groupBy { book ->
+                        when (book.categoryId) {
+                            1L -> "Clásicos universales"
+                            2L -> "Ciencia ficción y fantasía"
+                            3L -> "Romance y drama"
+                            4L -> "Misterio y suspenso"
+                            else -> "Otros"
+                        }
+                    }
+                    _home.update {
+                        it.copy(
+                            isLoading = false,
+                            categorizedBooks = categorized,
+                            featuredBooks = books.shuffled().take(6)
+                        )
+                    }
                 }
-            } catch (e: Exception) {
-                _home.update { it.copy(isLoading = false, errorMsg = "Error al cargar categorías: ${e.message}") }
-            }
         }
     }
 
     fun loadActiveLoans() {
-        viewModelScope.launch {
-            _user.value?.let { user ->
-                try {
-                    val loans = loanRepository.getLoansByUser(user.id)
-                    val loanDetails = loans
-                        .filter { it.status == "Active" } // Filter for active loans
-                        .mapNotNull { loan ->
+        _user.value?.let { user ->
+            viewModelScope.launch {
+                loanRepository.getLoansByUser(user.id)
+                    .catch { e ->
+                        _home.update { it.copy(errorMsg = "Error al cargar préstamos: ${e.message}") }
+                    }
+                    .collect { loans ->
+                        val activeLoansList = loans.filter { it.status == "Active" }
+                        val loanDetails = activeLoansList.mapNotNull { loan ->
                             bookRepository.getBookById(loan.bookId)?.let { book ->
                                 ActiveLoanDetails(book, loan)
                             }
                         }
-                    _activeLoans.value = loanDetails
-                } catch (e: Exception) {
-                    _home.update { it.copy(errorMsg = "Error al cargar préstamos: ${e.message}") }
-                }
+                        _activeLoans.value = loanDetails
+                    }
             }
         }
     }
@@ -241,25 +244,43 @@ class MainViewModel @Inject constructor(
     }
 
     fun confirmLoanFromCart(cartItem: CartItem) {
-        viewModelScope.launch {
-            _user.value?.let { user ->
-                val userId = user.id
-                val bookId = cartItem.book.id
-                val loanDays = cartItem.loanDays
+        registerLoan(cartItem.book.id, cartItem.loanDays)
+    }
 
+    fun registerLoan(bookId: Long, loanDays: Int) {
+        viewModelScope.launch {
+            val userId = _user.value?.id ?: return@launch
+            val bookToLoan = bookRepository.getBookById(bookId)
+
+            if (bookToLoan == null || bookToLoan.status != "Available") {
+                _home.update { it.copy(errorMsg = "Error: Libro no disponible para préstamo.") }
+                return@launch
+            }
+
+            try {
                 val loanDate = LocalDate.now()
                 val dueDate = loanDate.plusDays(loanDays.toLong())
                 val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-                registerLoan(
+                val newLoan = LoanEntity(
                     userId = userId,
                     bookId = bookId,
                     loanDate = loanDate.format(formatter),
-                    dueDate = dueDate.format(formatter)
+                    dueDate = dueDate.format(formatter),
+                    returnDate = null,
+                    status = "Active"
                 )
+                loanRepository.insert(newLoan)
 
-                removeFromCart(bookId)
-                loadActiveLoans()
+                val updatedBook = bookToLoan.copy(status = "Loaned")
+                bookRepository.update(updatedBook)
+
+                // --- Actualización Crítica ---
+                loadActiveLoans() // Refresca la lista de préstamos
+                removeFromCart(bookId) // Quita el libro del carrito
+
+            } catch (e: Exception) {
+                _home.update { it.copy(errorMsg = "Error al registrar el préstamo: ${e.message}") }
             }
         }
     }
@@ -425,29 +446,6 @@ class MainViewModel @Inject constructor(
 
     fun clearRegisterResult() {
         _register.update { it.copy(success = false, errorMsg = null) }
-    }
-
-    fun registerLoan(userId: Long, bookId: Long, loanDate: String, dueDate: String) {
-        viewModelScope.launch {
-            val bookResult = runCatching { bookRepository.getBookById(bookId) }
-            val currentBook = bookResult.getOrNull()
-
-            if (currentBook == null || currentBook.status != "Available") {
-                _home.update { it.copy(errorMsg = "Error: Libro no disponible para préstamo.") }
-                return@launch
-            }
-
-            try {
-                val newLoan = LoanEntity(userId = userId, bookId = bookId, loanDate = loanDate, dueDate = dueDate, returnDate = null, status = "Active")
-                loanRepository.insert(newLoan)
-
-                val updatedBook = currentBook.copy(status = "Loaned")
-                bookRepository.update(updatedBook)
-
-            } catch (e: Exception) {
-                _home.update { it.copy(errorMsg = "Error al registrar el préstamo: ${e.message}") }
-            }
-        }
     }
 
     fun onUpdateUserProfileImageChange(uri: Uri?) {

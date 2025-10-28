@@ -8,12 +8,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -48,16 +44,18 @@ fun HomeScreen(
         )
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) { // 1. Fondo del tema por defecto
+    val freeBooks = allBooks.filter { it.homeSection == "Free" }
+    val trendingBooks = allBooks.filter { it.homeSection == "Trending" }
+
+    Surface(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            item { FreeBooksSection(books = homeState.categorizedBooks["Ciencia ficción y fantasía"] ?: emptyList(), onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
-            item { TrendingBooksSection(books = allBooks.filterNot { it.categoryId == 2L }, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
+            item { FreeBooksSection(books = freeBooks, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
+            item { TrendingBooksSection(books = trendingBooks, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
         }
     }
 }
-
 
 @Composable
 private fun FreeBooksSection(books: List<BookEntity>, onBookClick: (BookEntity) -> Unit, purpleColor: Color) {
@@ -86,7 +84,7 @@ private fun FreeBookCarouselItem(book: BookEntity, onBookClick: () -> Unit) {
     Card(
         modifier = Modifier.width(280.dp).clickable { onBookClick() },
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant) // Color sutil del tema
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current).data(book.coverUrl).crossfade(true).build(),
@@ -115,7 +113,7 @@ private fun TrendingBooksSection(books: List<BookEntity>, onBookClick: (BookEnti
         Spacer(Modifier.height(16.dp))
         LazyHorizontalGrid(
             rows = GridCells.Fixed(2),
-            modifier = Modifier.height(420.dp), // Aumentamos la altura para más visibilidad
+            modifier = Modifier.height(420.dp),
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

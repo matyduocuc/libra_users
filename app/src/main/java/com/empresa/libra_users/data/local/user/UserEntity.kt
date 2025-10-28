@@ -1,5 +1,6 @@
 package com.empresa.libra_users.data.local.user
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -11,5 +12,8 @@ data class UserEntity(
     val email: String,
     val phone: String,
     val password: String,
-    val profilePictureUri: String? = null // Nuevo campo para la foto de perfil
+    val role: String = "user",
+    // Se añade ColumnInfo para la migración de la base de datos
+    @ColumnInfo(defaultValue = "active") val status: String = "active",
+    val profilePictureUri: String? = null
 )

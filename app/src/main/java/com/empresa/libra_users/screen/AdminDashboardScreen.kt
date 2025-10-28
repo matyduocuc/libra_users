@@ -50,6 +50,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.empresa.libra_users.screen.admin.books.AdminBooksScreen
+import com.empresa.libra_users.screen.admin.loans.AdminLoansScreen
+import com.empresa.libra_users.screen.admin.reports.AdminReportsScreen
+import com.empresa.libra_users.screen.admin.users.AdminUsersScreen
 import com.empresa.libra_users.viewmodel.admin.AdminDashboardViewModel
 
 // Data class to represent a navigation item
@@ -94,9 +97,9 @@ fun AdminDashboardScreen(modifier: Modifier = Modifier) {
                     AdminHomeScreen() // Our newly created home screen, now connected to ViewModel
                 }
                 composable("admin_books") { AdminBooksScreen() }
-                composable("admin_users") { PlaceholderScreen("Gestión de Usuarios") }
-                composable("admin_loans") { PlaceholderScreen("Control de Préstamos") }
-                composable("admin_reports") { PlaceholderScreen("Informes y Estadísticas") }
+                composable("admin_users") { AdminUsersScreen() }
+                composable("admin_loans") { AdminLoansScreen() }
+                composable("admin_reports") { AdminReportsScreen() }
             }
         }
     }

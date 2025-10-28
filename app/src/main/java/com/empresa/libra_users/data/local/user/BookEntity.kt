@@ -17,5 +17,6 @@ data class BookEntity(
     val inventoryCode: String,
 
     // AÑADIDO: Campo esencial para mostrar la portada en HomeScreen
-    val coverUrl: String = ""
+    val coverUrl: String = "",
+    val homeSection: String = "None" // Nueva propiedad para la sección en HomeScreen
 )

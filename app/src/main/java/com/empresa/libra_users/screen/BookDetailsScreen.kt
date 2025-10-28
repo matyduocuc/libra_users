@@ -24,9 +24,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.empresa.libra_users.data.local.user.BookEntity
 import com.empresa.libra_users.viewmodel.MainViewModel
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,12 +60,12 @@ fun BookDetailsScreen(
                 }
             )
         }
-    ) {
+    ) { paddingValues ->
         val book = bookState.value
         if (book != null) {
             Column(
                 modifier = Modifier
-                    .padding(it)
+                    .padding(paddingValues)
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
@@ -124,15 +121,8 @@ fun BookDetailsScreen(
                 expiryDate = expiryDate.value, onExpiryDateChange = { date -> expiryDate.value = date },
                 cvv = cvv.value, onCvvChange = { c -> cvv.value = c },
                 onConfirm = {
-                    user?.let { currentUser ->
-                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        val calendar = Calendar.getInstance()
-                        val loanDate = dateFormat.format(calendar.time)
-                        calendar.add(Calendar.DAY_OF_YEAR, loanDays.value)
-                        val dueDate = dateFormat.format(calendar.time)
-
-                        vm.registerLoan(currentUser.id, bookId, loanDate, dueDate)
-                    }
+                    // Llama a la función registerLoan con los parámetros correctos
+                    vm.registerLoan(bookId = bookId, loanDays = loanDays.value)
                     showPaymentDialog.value = false
                 },
                 onDismiss = { showPaymentDialog.value = false }

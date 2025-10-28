@@ -2,12 +2,14 @@ package com.empresa.libra_users.data.repository
 
 import com.empresa.libra_users.data.local.user.LoanDao
 import com.empresa.libra_users.data.local.user.LoanEntity
+import kotlinx.coroutines.flow.Flow
 
 class LoanRepository(private val loanDao: LoanDao) {
     suspend fun insert(loan: LoanEntity): Long = loanDao.insert(loan)
+    fun getAllLoansFlow(): Flow<List<LoanEntity>> = loanDao.getAllLoansFlow()
     suspend fun getAllLoans(): List<LoanEntity> = loanDao.getAllLoans()
     suspend fun getLoanById(id: Long) = loanDao.getLoanById(id)
-    suspend fun getLoansByUser(userId: Long): List<LoanEntity> = loanDao.getLoansByUser(userId)
+    fun getLoansByUser(userId: Long): Flow<List<LoanEntity>> = loanDao.getLoansByUser(userId)
     suspend fun update(loan: LoanEntity) = loanDao.update(loan)
     suspend fun countActiveLoans(): Int = loanDao.countActiveLoans()
 

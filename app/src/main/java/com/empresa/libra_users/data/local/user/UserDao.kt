@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Delete
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
@@ -30,7 +31,7 @@ interface UserDao {
 
     // Obtener todos los usuarios
     @Query("SELECT * FROM users ORDER BY id ASC")
-    suspend fun getAll(): List<UserEntity>
+    fun getAll(): Flow<List<UserEntity>>
 
     // Obtener un usuario por su ID
     @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
