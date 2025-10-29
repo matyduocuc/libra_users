@@ -263,7 +263,7 @@ private fun UnauthenticatedView(navController: NavHostController, vm: MainViewMo
             RegisterScreen(
                 vm = vm,
                 onGoLogin = { navController.popBackStack() },
-                onRegisteredNavigateLogin = { navController.popBackStack() }
+                onRegisteredNavigateLogin = { navController.navigate(Routes.LOGIN) { popUpTo(Routes.LOGIN) { inclusive = true } } }
             )
         }
     }

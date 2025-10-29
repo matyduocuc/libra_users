@@ -86,12 +86,10 @@ fun RegisterScreen(
 
     LaunchedEffect(state.success) {
         if (state.success) {
-            scope.launch {
-                snackbarHostState.showSnackbar("¡Cuenta creada con éxito!")
-                delay(3000)
-                onRegisteredNavigateLogin()
-                vm.clearRegisterResult()
-            }
+            snackbarHostState.showSnackbar("¡Cuenta creada con éxito!")
+            delay(2000)
+            vm.clearRegisterResult() // Limpiamos el estado ANTES de navegar
+            onRegisteredNavigateLogin()
         }
     }
 
