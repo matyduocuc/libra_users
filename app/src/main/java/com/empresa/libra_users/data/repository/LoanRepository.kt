@@ -19,4 +19,28 @@ class LoanRepository(private val loanDao: LoanDao) {
     suspend fun countAllLoans(): Int {
         return loanDao.countAllLoans()
     }
+
+    suspend fun getLoansByStatus(status: String): List<LoanEntity> {
+        return loanDao.getLoansByStatus(status)
+    }
+
+    suspend fun getLoansByUserAndStatus(userId: Long, status: String): List<LoanEntity> {
+        return loanDao.getLoansByUserAndStatus(userId, status)
+    }
+
+    suspend fun getLoansByBook(bookId: Long): List<LoanEntity> {
+        return loanDao.getLoansByBook(bookId)
+    }
+
+    suspend fun hasActiveLoan(userId: Long, bookId: Long): Boolean {
+        return loanDao.hasActiveLoan(userId, bookId) > 0
+    }
+
+    suspend fun getOverdueLoans(today: String): List<LoanEntity> {
+        return loanDao.getOverdueLoans(today)
+    }
+
+    suspend fun getLoansByDateRange(fechaInicio: String, fechaFin: String): List<LoanEntity> {
+        return loanDao.getLoansByDateRange(fechaInicio, fechaFin)
+    }
 }

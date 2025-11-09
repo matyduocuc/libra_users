@@ -22,4 +22,20 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun searchBooks(query: String): List<BookEntity> {
         return bookDao.searchBooks(query)
     }
+
+    suspend fun searchBooksWithFilters(query: String, categoria: String?, soloDisponibles: Boolean): List<BookEntity> {
+        return bookDao.searchBooksWithFilters(query, categoria, if (soloDisponibles) 1 else 0)
+    }
+
+    suspend fun getBooksByCategory(categoria: String): List<BookEntity> {
+        return bookDao.getBooksByCategory(categoria)
+    }
+
+    suspend fun getAvailableBooks(): List<BookEntity> {
+        return bookDao.getAvailableBooks()
+    }
+
+    suspend fun countActiveLoansForBook(bookId: Long): Int {
+        return bookDao.countActiveLoansForBook(bookId)
+    }
 }

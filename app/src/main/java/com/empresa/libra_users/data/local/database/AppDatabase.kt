@@ -16,11 +16,8 @@ import com.empresa.libra_users.data.local.user.UserEntity
 
 @Database(
     entities = [UserEntity::class, BookEntity::class, LoanEntity::class, NotificationEntity::class],
-    version = 9, // Versión actualizada para la migración
-    exportSchema = true,
-    autoMigrations = [
-        AutoMigration(from = 8, to = 9)
-    ]
+    version = 10, // Versión actualizada para nuevos campos de BookEntity
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -40,7 +37,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "libra_users_db"
                 )
-                .build() // Ya no se necesita fallbackToDestructiveMigration
+                .fallbackToDestructiveMigration() // Para desarrollo: recrea la BD con nuevos campos
+                .build()
                 INSTANCE = instance
                 instance
             }

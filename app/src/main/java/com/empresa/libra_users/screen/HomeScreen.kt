@@ -21,6 +21,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.empresa.libra_users.data.local.user.BookEntity
 import com.empresa.libra_users.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -28,10 +29,30 @@ fun HomeScreen(
     onLogout: () -> Unit // Manteniéndolo por si se usa en el drawer
 ) {
     val homeState by vm.home.collectAsStateWithLifecycle()
+    val user by vm.user.collectAsStateWithLifecycle()
     val allBooks = homeState.categorizedBooks.values.flatten().distinctBy { it.id }
     val purpleColor = Color(0xFF6650a4) // Color morado principal
 
     var selectedBook by remember { mutableStateOf<BookEntity?>(null) }
+    
+    // Snackbar para mostrar mensaje de bienvenida
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var hasShownWelcome by remember { mutableStateOf(false) }
+    
+    // Mostrar mensaje de bienvenida solo una vez cuando el usuario se carga
+    LaunchedEffect(user?.id) {
+        if (user != null && !hasShownWelcome) {
+            val userName = user?.name?.takeIf { it.isNotBlank() } ?: "Usuario"
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "¡Bienvenido, $userName!",
+                    duration = SnackbarDuration.Short
+                )
+            }
+            hasShownWelcome = true
+        }
+    }
 
     // -- Lógica para mostrar el diálogo de detalles --
     selectedBook?.let { book ->
@@ -47,12 +68,17 @@ fun HomeScreen(
     val freeBooks = allBooks.filter { it.homeSection == "Free" }
     val trendingBooks = allBooks.filter { it.homeSection == "Trending" }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
-            item { FreeBooksSection(books = freeBooks, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
-            item { TrendingBooksSection(books = trendingBooks, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Surface(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                contentPadding = PaddingValues(vertical = 16.dp),
+                modifier = Modifier.padding(paddingValues)
+            ) {
+                item { FreeBooksSection(books = freeBooks, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
+                item { TrendingBooksSection(books = trendingBooks, onBookClick = { book -> selectedBook = book }, purpleColor = purpleColor) }
+            }
         }
     }
 }

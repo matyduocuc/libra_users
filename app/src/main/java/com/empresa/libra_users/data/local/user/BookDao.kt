@@ -34,9 +34,25 @@ interface BookDao {
     suspend fun getBooksByAuthorTag(authorTag: String): List<BookEntity>
 
     // AÑADIDO: CONSULTA PARA LA FUNCIÓN DE BÚSQUEDA
-    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'" )
+    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' OR isbn LIKE '%' || :query || '%'" )
     suspend fun searchBooks(query: String): List<BookEntity>
+
+    // Búsqueda por categoría
+    @Query("SELECT * FROM books WHERE categoria LIKE '%' || :categoria || '%'")
+    suspend fun getBooksByCategory(categoria: String): List<BookEntity>
+
+    // Filtro por disponibilidad
+    @Query("SELECT * FROM books WHERE disponibles > 0")
+    suspend fun getAvailableBooks(): List<BookEntity>
+
+    // Búsqueda combinada con filtros
+    @Query("SELECT * FROM books WHERE (title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' OR isbn LIKE '%' || :query || '%') AND (:categoria IS NULL OR categoria LIKE '%' || :categoria || '%') AND (:soloDisponibles = 0 OR disponibles > 0)")
+    suspend fun searchBooksWithFilters(query: String, categoria: String?, soloDisponibles: Int): List<BookEntity>
 
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
+
+    // Contar préstamos activos de un libro
+    @Query("SELECT COUNT(*) FROM loans WHERE bookId = :bookId AND status = 'Active'")
+    suspend fun countActiveLoansForBook(bookId: Long): Int
 }
