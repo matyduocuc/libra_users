@@ -246,6 +246,15 @@ class MainViewModel @Inject constructor(
     fun confirmLoanFromCart(cartItem: CartItem) {
         registerLoan(cartItem.book.id, cartItem.loanDays)
     }
+    
+    fun confirmMultipleLoansFromCart(cartItems: List<CartItem>) {
+        viewModelScope.launch {
+            cartItems.forEach { cartItem ->
+                registerLoan(cartItem.book.id, cartItem.loanDays)
+                delay(100) // Pequeño delay entre préstamos para evitar problemas de concurrencia
+            }
+        }
+    }
 
     fun registerLoan(bookId: Long, loanDays: Int) {
         viewModelScope.launch {

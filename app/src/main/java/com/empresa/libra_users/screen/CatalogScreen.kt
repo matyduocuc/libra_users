@@ -49,6 +49,7 @@ fun CatalogScreen(vm: MainViewModel) {
     }
 
     var selectedBook by remember { mutableStateOf<BookEntity?>(null) }
+    val isDarkMode by vm.isDarkMode.collectAsStateWithLifecycle()
 
     selectedBook?.let { book ->
         BookDetailsDialog(
@@ -56,11 +57,15 @@ fun CatalogScreen(vm: MainViewModel) {
             onDismiss = { selectedBook = null },
             onAddToCart = { bookEntity ->
                 vm.addToCart(bookEntity)
-            }
+            },
+            isDarkMode = isDarkMode
         )
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Transparent
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             OutlinedTextField(
                 value = searchQuery,

@@ -2,6 +2,7 @@ package com.empresa.libra_users.screen.admin.books
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -10,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -22,8 +24,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,26 +75,68 @@ fun AdminBooksScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Gestión de Libros") }
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Book,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                "Gestión de Libros",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "${uiState.filteredBooks.size} libro${if (uiState.filteredBooks.size != 1) "s" else ""}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddBookDialog = true }) {
+            FloatingActionButton(
+                onClick = { showAddBookDialog = true },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir libro")
             }
         }
     ) { paddingValues ->
+        val layoutDirection = LocalLayoutDirection.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(
+                    start = paddingValues.calculateStartPadding(layoutDirection),
+                    end = paddingValues.calculateEndPadding(layoutDirection),
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding()
+                )
         ) {
             // Barra de búsqueda y filtros
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp, bottom = 12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -114,7 +160,10 @@ fun AdminBooksScreen(
                         // Filtro por categoría
                         FilterChip(
                             selected = selectedCategory != null,
-                            onClick = { selectedCategory = if (selectedCategory != null) null else categorias.firstOrNull() },
+                            onClick = {
+                                selectedCategory =
+                                    if (selectedCategory != null) null else categorias.firstOrNull()
+                            },
                             label = { Text("Categoría") },
                             modifier = Modifier.weight(1f)
                         )
@@ -131,7 +180,9 @@ fun AdminBooksScreen(
                     // Selector de categoría si está activo
                     if (selectedCategory != null) {
                         var expanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded }) {
                             TextField(
                                 value = selectedCategory ?: "",
                                 onValueChange = {},
@@ -142,7 +193,9 @@ fun AdminBooksScreen(
                                     .menuAnchor()
                                     .fillMaxWidth()
                             )
-                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }) {
                                 DropdownMenuItem(
                                     text = { Text("Todas") },
                                     onClick = {
@@ -168,44 +221,82 @@ fun AdminBooksScreen(
             // Lista de libros
             Box(
                 modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            when {
-                uiState.isLoading -> CircularProgressIndicator()
-                uiState.error != null -> Text(
-                    text = uiState.error ?: "Error desconocido",
-                    color = MaterialTheme.colorScheme.error
-                )
-                    uiState.filteredBooks.isEmpty() -> {
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    uiState.isLoading -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                             Text(
-                                "No hay libros que coincidan con tu búsqueda.",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            Text(
-                                "Intenta ajustar los filtros o crear un nuevo libro.",
+                                text = "Cargando libros...",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                else -> {
-                    LazyVerticalGrid(
+
+                    uiState.error != null -> {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text(
+                                text = uiState.error ?: "Error desconocido",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+
+                    uiState.filteredBooks.isEmpty() -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Book,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                "No hay libros que coincidan con tu búsqueda.",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                "Intenta ajustar los filtros o crear un nuevo libro.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    else -> {
+                        LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 140.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                             items(uiState.filteredBooks, key = { it.id }) { book ->
-                            BookGridItem(
-                                book = book,
+                                BookGridItem(
+                                    book = book,
                                     onClick = { selectedBook = book },
                                     onEdit = { selectedBook = book; showEditDialog = true }
-                            )
+                                )
                             }
                         }
                     }
@@ -220,8 +311,8 @@ fun AdminBooksScreen(
             onDismiss = { showAddBookDialog = false },
             onAddBook = { result ->
                 if (result.isSuccess) {
-                showAddBookDialog = false
-            }
+                    showAddBookDialog = false
+                }
             },
             viewModel = viewModel
         )
@@ -264,7 +355,7 @@ fun AdminBooksScreen(
                     onClick = {
                         viewModel.deleteBook(selectedBook!!)
                         showDeleteConfirmDialog = false
-                selectedBook = null
+                        selectedBook = null
                     }
                 ) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
@@ -292,18 +383,18 @@ private fun BookGridItem(
     ) {
         Column {
             Box {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(book.coverUrl)
-                    .crossfade(true)
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(book.coverUrl)
+                        .crossfade(true)
                         .error(android.R.drawable.ic_menu_report_image)
-                    .build(),
-                contentDescription = "Portada de ${book.title}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.7f),
-                contentScale = ContentScale.Crop
-            )
+                        .build(),
+                    contentDescription = "Portada de ${book.title}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(0.7f),
+                    contentScale = ContentScale.Crop
+                )
                 // Badge de disponibilidad
                 Surface(
                     modifier = Modifier
@@ -364,37 +455,53 @@ private fun BookDetailsDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(book.coverUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Portada de ${book.title}",
-                    modifier = Modifier.fillMaxWidth().aspectRatio(0.7f),
-                    contentScale = ContentScale.Fit
-                )
-                Text("Autor: ${book.author}", style = MaterialTheme.typography.bodyLarge)
-                Text("Categoría: ${book.categoria}", style = MaterialTheme.typography.bodyMedium)
-                Text("ISBN: ${book.isbn}", style = MaterialTheme.typography.bodyMedium)
-                Text("Editorial: ${book.publisher}", style = MaterialTheme.typography.bodyMedium)
-                Text("Año: ${book.anio}", style = MaterialTheme.typography.bodyMedium)
-                Text("Stock: ${book.stock}", style = MaterialTheme.typography.bodyMedium)
-                Text("Disponibles: ${book.disponibles}", style = MaterialTheme.typography.bodyMedium)
-                Text("Estado: ${book.status}", style = MaterialTheme.typography.bodyMedium)
-                if (book.descripcion.isNotBlank()) {
-                    Text("Descripción: ${book.descripcion}", style = MaterialTheme.typography.bodySmall)
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(book.coverUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Portada de ${book.title}",
+                        modifier = Modifier.fillMaxWidth().aspectRatio(0.7f),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text("Autor: ${book.author}", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Categoría: ${book.categoria}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text("ISBN: ${book.isbn}", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Editorial: ${book.publisher}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text("Año: ${book.anio}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Stock: ${book.stock}", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Disponibles: ${book.disponibles}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text("Estado: ${book.status}", style = MaterialTheme.typography.bodyMedium)
+                    if (book.descripcion.isNotBlank()) {
+                        Text(
+                            "Descripción: ${book.descripcion}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
-            }
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(Modifier.width(4.dp))
                     Text("Editar")
                 }
-            TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                TextButton(onClick = onDismiss) {
+                    Text("Cerrar")
                 }
             }
         },
@@ -420,7 +527,11 @@ private fun AddBookDialog(
     var categoria by remember { mutableStateOf("") }
     var isbn by remember { mutableStateOf("") }
     var publisher by remember { mutableStateOf("") }
-    var anio by remember { mutableStateOf(Calendar.getInstance().get(Calendar.YEAR).toString()) }
+    var anio by remember {
+        mutableStateOf(
+            Calendar.getInstance().get(Calendar.YEAR).toString()
+        )
+    }
     var stock by remember { mutableStateOf("1") }
     var descripcion by remember { mutableStateOf("") }
     var coverUrl by remember { mutableStateOf("") }
@@ -436,7 +547,18 @@ private fun AddBookDialog(
     var descripcionError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
 
-    val categoriasDisponibles = listOf("Ciencia", "Literatura", "Ciencia Ficción", "Fantasía", "Historia", "Juvenil", "Misterio", "Suspenso", "Terror", "Romance")
+    val categoriasDisponibles = listOf(
+        "Ciencia",
+        "Literatura",
+        "Ciencia Ficción",
+        "Fantasía",
+        "Historia",
+        "Juvenil",
+        "Misterio",
+        "Suspenso",
+        "Terror",
+        "Romance"
+    )
     var categoriaExpanded by remember { mutableStateOf(false) }
 
     val categoryMapping = mapOf(
@@ -501,7 +623,11 @@ private fun AddBookDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 generalError?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 OutlinedTextField(
@@ -654,7 +780,8 @@ private fun AddBookDialog(
                     val anioInt = anio.toIntOrNull() ?: anioActual
                     val stockInt = stock.toIntOrNull() ?: 1
                     val categoryId = categoryMapping[categoria] ?: 1
-                    val sectionToSave = if (selectedHomeSection == "Ninguno") "None" else selectedHomeSection
+                    val sectionToSave =
+                        if (selectedHomeSection == "Ninguno") "None" else selectedHomeSection
 
                     val result = viewModel.addBook(
                         title = title,
@@ -672,7 +799,8 @@ private fun AddBookDialog(
                     if (result.isSuccess) {
                         onAddBook(result)
                     } else {
-                        generalError = result.exceptionOrNull()?.message ?: "Error al guardar el libro"
+                        generalError =
+                            result.exceptionOrNull()?.message ?: "Error al guardar el libro"
                     }
                 },
                 enabled = canSubmit
@@ -716,7 +844,18 @@ private fun EditBookDialog(
     var stockError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
 
-    val categoriasDisponibles = listOf("Ciencia", "Literatura", "Ciencia Ficción", "Fantasía", "Historia", "Juvenil", "Misterio", "Suspenso", "Terror", "Romance")
+    val categoriasDisponibles = listOf(
+        "Ciencia",
+        "Literatura",
+        "Ciencia Ficción",
+        "Fantasía",
+        "Historia",
+        "Juvenil",
+        "Misterio",
+        "Suspenso",
+        "Terror",
+        "Romance"
+    )
     var categoriaExpanded by remember { mutableStateOf(false) }
 
     val categoryMapping = mapOf(
@@ -781,7 +920,11 @@ private fun EditBookDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 generalError?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 OutlinedTextField(
@@ -938,7 +1081,8 @@ private fun EditBookDialog(
                     val anioInt = anio.toIntOrNull() ?: book.anio
                     val stockInt = stock.toIntOrNull() ?: book.stock
                     val categoryId = categoryMapping[categoria] ?: book.categoryId.toInt()
-                    val sectionToSave = if (selectedHomeSection == "Ninguno") "None" else selectedHomeSection
+                    val sectionToSave =
+                        if (selectedHomeSection == "Ninguno") "None" else selectedHomeSection
 
                     val updatedBook = book.copy(
                         title = title,
@@ -959,7 +1103,8 @@ private fun EditBookDialog(
                         if (result.isSuccess) {
                             onUpdate(result)
                         } else {
-                            generalError = result.exceptionOrNull()?.message ?: "Error al actualizar el libro"
+                            generalError = result.exceptionOrNull()?.message
+                                ?: "Error al actualizar el libro"
                         }
                     }
                 },

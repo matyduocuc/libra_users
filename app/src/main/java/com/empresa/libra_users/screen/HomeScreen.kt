@@ -54,6 +54,8 @@ fun HomeScreen(
         }
     }
 
+    val isDarkMode by vm.isDarkMode.collectAsStateWithLifecycle()
+    
     // -- Lógica para mostrar el diálogo de detalles --
     selectedBook?.let { book ->
         BookDetailsDialog(
@@ -61,7 +63,8 @@ fun HomeScreen(
             onDismiss = { selectedBook = null },
             onAddToCart = { bookEntity ->
                 vm.addToCart(bookEntity)
-            }
+            },
+            isDarkMode = isDarkMode
         )
     }
 
@@ -71,7 +74,10 @@ fun HomeScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Transparent
+        ) {
             LazyColumn(
                 contentPadding = PaddingValues(vertical = 16.dp),
                 modifier = Modifier.padding(paddingValues)

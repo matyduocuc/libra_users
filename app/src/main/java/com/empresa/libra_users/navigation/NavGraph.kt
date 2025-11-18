@@ -75,21 +75,8 @@ private fun AuthenticatedView(navController: NavHostController, vm: MainViewMode
 
     user?.let { currentUser ->
         if (currentUser.email.equals("admin123@gmail.com", ignoreCase = true)) {
-            // Admin View
-            Scaffold(
-                topBar = {
-                    CenterAlignedTopAppBar(
-                        title = { Text("Panel de Administrador") },
-                        actions = {
-                            IconButton(onClick = { vm.logout() }) {
-                                Icon(Icons.AutoMirrored.Filled.Logout, "Cerrar Sesión")
-                            }
-                        }
-                    )
-                }
-            ) { padding ->
-                AdminDashboardScreen(modifier = Modifier.padding(padding))
-            }
+            // Admin View - El AdminDashboardScreen ya tiene su propio Scaffold con TopAppBar
+            AdminDashboardScreen(modifier = Modifier)
         } else {
             // Regular User View
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)

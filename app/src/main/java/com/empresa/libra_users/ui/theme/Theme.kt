@@ -11,7 +11,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -19,11 +21,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// LocalComposition para el estado del tema oscuro que se puede acceder desde cualquier pantalla
+val LocalDarkTheme = compositionLocalOf<Boolean> { false }
+
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80,
-    background = Color.Transparent, // Fondo transparente para que se vea la imagen
+    background = Color.Transparent, // Fondo transparente para que se vea el decorativo
     surface = Color.Transparent // Superficies transparentes
 )
 
@@ -31,7 +36,7 @@ private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40,
-    background = Color.Transparent, // Fondo transparente
+    background = Color.Transparent, // Fondo transparente para que se vea el decorativo
     surface = Color.Transparent // Superficies transparentes
 )
 
@@ -44,7 +49,13 @@ fun LibrausersTheme(
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            val dynamicScheme = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            // Sobrescribir background y surface para que sean transparentes y se vea el fondo decorativo
+            dynamicScheme.copy(
+                background = Color.Transparent,
+                surface = Color.Transparent,
+                surfaceVariant = if (darkTheme) dynamicScheme.surfaceVariant.copy(alpha = 0.8f) else dynamicScheme.surfaceVariant.copy(alpha = 0.9f)
+            )
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
@@ -63,11 +74,12 @@ fun LibrausersTheme(
         colorScheme = colorScheme,
         typography = Typography
     ) {
-        // La superficie con el fondo se aplica aquí, una sola vez
-        Surface(
-            modifier = Modifier.fillMaxSize().appBackground(darkTheme = darkTheme)
-        ) {
-            content()
+        // Proporcionar el estado del tema oscuro a todas las pantallas
+        CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+            // Aplicar fondo decorativo a toda la aplicación
+            DecoratedBackground(darkTheme = darkTheme) {
+                content()
+            }
         }
     }
 }

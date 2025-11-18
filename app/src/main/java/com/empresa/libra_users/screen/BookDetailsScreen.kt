@@ -1,7 +1,10 @@
 package com.empresa.libra_users.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,10 +16,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,39 +72,239 @@ fun BookDetailsScreen(
         if (book != null) {
             Column(
                 modifier = Modifier
+                    .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // --- Contenido de la pantalla de detalles ---
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(book.coverUrl).crossfade(true).build(),
-                    contentDescription = book.title,
-                    modifier = Modifier.fillMaxWidth().height(220.dp), contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(book.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("por ${book.author}", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                RatingBar(rating = 4.5) // Calificación con estrellas
-                Spacer(Modifier.height(16.dp))
-                Text("Editorial: ${book.publisher}", style = MaterialTheme.typography.bodyLarge)
-                Text("Publicado: ${book.publishDate}", style = MaterialTheme.typography.bodyLarge)
-                Text("ISBN: ${book.isbn}", style = MaterialTheme.typography.bodyLarge)
-                Spacer(Modifier.height(16.dp))
-                Text("Descripción", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Aquí va la descripción del libro...", style = MaterialTheme.typography.bodyLarge)
-                Spacer(Modifier.height(24.dp))
-                Button(
-                    onClick = { showLoanDialog.value = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = book.status == "Available"
+                // --- Portada del libro con diseño mejorado ---
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp)
                 ) {
-                    Text(if (book.status == "Available") "Solicitar Préstamo" else "No disponible")
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(book.coverUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = book.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
+                        contentScale = ContentScale.Crop
+                    )
+                    // Overlay gradiente para mejor legibilidad del texto
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                                        MaterialTheme.colorScheme.background
+                                    ),
+                                    startY = 200f
+                                )
+                            )
+                    )
+                }
+                
+                // --- Información principal del libro ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 16.dp)
+                ) {
+                    // Título
+                    Text(
+                        text = book.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    // Autor
+                    Text(
+                        text = "por ${book.author}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Spacer(Modifier.height(16.dp))
+                    
+                    // Calificación con estrellas y número
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RatingBar(
+                            rating = 4.5,
+                            modifier = Modifier
+                        )
+                        Text(
+                            text = "4.5",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "(125 reseñas)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    Spacer(Modifier.height(20.dp))
+                    
+                    // Badge de disponibilidad
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (book.status == "Available") 
+                                MaterialTheme.colorScheme.primaryContainer 
+                            else 
+                                MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (book.status == "Available") "✓ Disponible" else "✗ No disponible",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (book.status == "Available") 
+                                    MaterialTheme.colorScheme.onPrimaryContainer 
+                                else 
+                                    MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                        
+                        if (book.disponibles > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "${book.disponibles} ejemplares",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(24.dp))
+                    
+                    // --- Información del libro en cards ---
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            BookInfoRow("Categoría", book.categoria.ifEmpty { "Sin categoría" })
+                            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                            BookInfoRow("Editorial", book.publisher)
+                            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                            BookInfoRow("Año de publicación", "${book.anio}")
+                            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                            BookInfoRow("ISBN", book.isbn)
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(24.dp))
+                    
+                    // --- Descripción del libro ---
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Descripción",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Spacer(Modifier.height(12.dp))
+                        
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Text(
+                                text = if (book.descripcion.isNotEmpty()) {
+                                    book.descripcion
+                                } else {
+                                    "No hay descripción disponible para este libro."
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.5,
+                                modifier = Modifier.padding(16.dp),
+                                textAlign = TextAlign.Justify
+                            )
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(32.dp))
+                    
+                    // --- Botón de préstamo mejorado ---
+                    Button(
+                        onClick = { showLoanDialog.value = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = book.status == "Available" && book.disponibles > 0,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            text = if (book.status == "Available" && book.disponibles > 0) {
+                                "Solicitar Préstamo"
+                            } else {
+                                "No disponible"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Spacer(Modifier.height(24.dp))
                 }
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
         }
@@ -132,14 +339,71 @@ fun BookDetailsScreen(
 }
 
 @Composable
-private fun RatingBar(rating: Double, starCount: Int = 5, starColor: Color = Color(0xFFFFC107)) {
-    Row {
+private fun RatingBar(
+    rating: Double,
+    starCount: Int = 5,
+    starColor: Color = Color(0xFFFFC107),
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         val fullStars = rating.toInt()
-        val halfStar = if (rating - fullStars >= 0.5) 1 else 0
-        val emptyStars = starCount - fullStars - halfStar
-        repeat(fullStars) { Icon(Icons.Filled.Star, contentDescription = null, tint = starColor) }
-        if (halfStar == 1) { Icon(Icons.Filled.StarHalf, contentDescription = null, tint = starColor) }
-        repeat(emptyStars) { Icon(Icons.Filled.StarOutline, contentDescription = null, tint = starColor) }
+        val hasHalfStar = (rating - fullStars) >= 0.5
+        val emptyStars = starCount - fullStars - if (hasHalfStar) 1 else 0
+        
+        repeat(fullStars) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = null,
+                tint = starColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        if (hasHalfStar) {
+            Icon(
+                imageVector = Icons.Filled.StarHalf,
+                contentDescription = null,
+                tint = starColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        repeat(emptyStars) {
+            Icon(
+                imageVector = Icons.Filled.StarOutline,
+                contentDescription = null,
+                tint = starColor.copy(alpha = 0.4f),
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BookInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.End,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(0.6f)
+        )
     }
 }
 
