@@ -70,13 +70,39 @@ fun AdminBooksScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("Gestión de Libros") }
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shadowElevation = 4.dp
+            ) {
+                TopAppBar(
+                    title = { 
+                        Text(
+                            "Gestión de Libros",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddBookDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir libro")
+            FloatingActionButton(
+                onClick = { showAddBookDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(64.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add, 
+                    contentDescription = "Añadir libro",
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
     ) { paddingValues ->
@@ -90,41 +116,74 @@ fun AdminBooksScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Búsqueda
+                    // Búsqueda mejorada
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         label = { Text("Buscar por título, autor o ISBN") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+                        leadingIcon = { 
+                            Icon(
+                                Icons.Default.Search, 
+                                contentDescription = "Buscar",
+                                tint = MaterialTheme.colorScheme.primary
+                            ) 
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
 
-                    // Filtros
+                    // Filtros mejorados
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Filtro por categoría
                         FilterChip(
                             selected = selectedCategory != null,
                             onClick = { selectedCategory = if (selectedCategory != null) null else categorias.firstOrNull() },
-                            label = { Text("Categoría") },
-                            modifier = Modifier.weight(1f)
+                            label = { 
+                                Text(
+                                    if (selectedCategory != null) "Categoría: $selectedCategory" else "Categoría",
+                                    style = MaterialTheme.typography.labelMedium
+                                ) 
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         )
 
                         // Filtro solo disponibles
                         FilterChip(
                             selected = soloDisponibles,
                             onClick = { soloDisponibles = !soloDisponibles },
-                            label = { Text("Solo disponibles") },
-                            modifier = Modifier.weight(1f)
+                            label = { 
+                                Text(
+                                    "Solo disponibles",
+                                    style = MaterialTheme.typography.labelMedium
+                                ) 
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         )
                     }
 
@@ -177,19 +236,38 @@ fun AdminBooksScreen(
                     color = MaterialTheme.colorScheme.error
                 )
                     uiState.filteredBooks.isEmpty() -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
-                            Text(
-                                "No hay libros que coincidan con tu búsqueda.",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            Text(
-                                "Intenta ajustar los filtros o crear un nuevo libro.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                modifier = Modifier.padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Book,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    "No hay libros que coincidan con tu búsqueda",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Intenta ajustar los filtros o crear un nuevo libro",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 else -> {
@@ -287,63 +365,79 @@ private fun BookGridItem(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column {
             Box {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(book.coverUrl)
-                    .crossfade(true)
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(book.coverUrl)
+                        .crossfade(true)
                         .error(android.R.drawable.ic_menu_report_image)
-                    .build(),
-                contentDescription = "Portada de ${book.title}",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.7f),
-                contentScale = ContentScale.Crop
-            )
-                // Badge de disponibilidad
+                        .build(),
+                    contentDescription = "Portada de ${book.title}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(0.7f),
+                    contentScale = ContentScale.Crop
+                )
+                // Badge de disponibilidad mejorado
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    shape = MaterialTheme.shapes.small,
+                        .padding(10.dp),
+                    shape = MaterialTheme.shapes.medium,
                     color = when {
                         book.disponibles > 0 -> MaterialTheme.colorScheme.primaryContainer
                         else -> MaterialTheme.colorScheme.errorContainer
-                    }
+                    },
+                    shadowElevation = 2.dp
                 ) {
                     Text(
                         text = "${book.disponibles}/${book.stock}",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         color = if (book.disponibles > 0) MaterialTheme.colorScheme.onPrimaryContainer
                         else MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
-            Column(Modifier.padding(8.dp)) {
+            Column(Modifier.padding(12.dp)) {
                 Text(
                     book.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     book.author,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    book.categoria,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Spacer(Modifier.height(6.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                ) {
+                    Text(
+                        book.categoria,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }
@@ -358,43 +452,111 @@ private fun BookDetailsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(book.title) },
+        title = { 
+            Text(
+                book.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            ) 
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(book.coverUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Portada de ${book.title}",
-                    modifier = Modifier.fillMaxWidth().aspectRatio(0.7f),
-                    contentScale = ContentScale.Fit
-                )
-                Text("Autor: ${book.author}", style = MaterialTheme.typography.bodyLarge)
-                Text("Categoría: ${book.categoria}", style = MaterialTheme.typography.bodyMedium)
-                Text("ISBN: ${book.isbn}", style = MaterialTheme.typography.bodyMedium)
-                Text("Editorial: ${book.publisher}", style = MaterialTheme.typography.bodyMedium)
-                Text("Año: ${book.anio}", style = MaterialTheme.typography.bodyMedium)
-                Text("Stock: ${book.stock}", style = MaterialTheme.typography.bodyMedium)
-                Text("Disponibles: ${book.disponibles}", style = MaterialTheme.typography.bodyMedium)
-                Text("Estado: ${book.status}", style = MaterialTheme.typography.bodyMedium)
+                // Portada mejorada
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(book.coverUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Portada de ${book.title}",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(0.7f),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                
+                // Información en cards
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        InfoRow("Autor", book.author)
+                        InfoRow("Categoría", book.categoria)
+                        InfoRow("ISBN", book.isbn)
+                        InfoRow("Editorial", book.publisher)
+                        InfoRow("Año", book.anio.toString())
+                    }
+                }
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        InfoColumn("Stock", book.stock.toString())
+                        InfoColumn("Disponibles", book.disponibles.toString())
+                        InfoColumn("Estado", book.status)
+                    }
+                }
+                
                 if (book.descripcion.isNotBlank()) {
-                    Text("Descripción: ${book.descripcion}", style = MaterialTheme.typography.bodySmall)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                "Descripción",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                book.descripcion,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onEdit) {
+                Button(
+                    onClick = onEdit,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Editar")
                 }
-            TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                TextButton(onClick = onDismiss) {
+                    Text("Cerrar")
                 }
             }
         },
@@ -404,8 +566,49 @@ private fun BookDetailsDialog(
                 Spacer(Modifier.width(4.dp))
                 Text("Eliminar", color = MaterialTheme.colorScheme.error)
             }
-        }
+        },
+        shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surface
     )
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun InfoColumn(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

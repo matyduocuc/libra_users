@@ -28,23 +28,61 @@ fun AdminReportsScreen(
 ) {
     val uiState by viewModel.reportsUiState.collectAsStateWithLifecycle()
 
-    Box(modifier = modifier.fillMaxSize()) {
-        when {
-            uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            uiState.error != null -> Text(
-                text = uiState.error ?: "Error desconocido",
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.align(Alignment.Center)
-            )
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(28.dp)
-                ) {
-                    item { LibraryStatusSection(status = uiState.libraryStatus) }
-                    item { TopBooksSection(topBooks = uiState.topBooks) }
-                    item { TopUsersSection(topUsers = uiState.topUsers) }
+    Scaffold(
+        topBar = {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shadowElevation = 4.dp
+            ) {
+                TopAppBar(
+                    title = { 
+                        Text(
+                            "Informes y Estadísticas",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
+        }
+    ) { paddingValues ->
+        Box(modifier = modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
+            when {
+                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                uiState.error != null -> {
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(32.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            text = uiState.error ?: "Error desconocido",
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        item { LibraryStatusSection(status = uiState.libraryStatus) }
+                        item { TopBooksSection(topBooks = uiState.topBooks) }
+                        item { TopUsersSection(topUsers = uiState.topUsers) }
+                    }
                 }
             }
         }
@@ -67,16 +105,34 @@ private fun LibraryStatusSection(status: LibraryStatus) {
         MaterialTheme.colorScheme.error
     )
 
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Estado de la Biblioteca", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text(
+                "Estado de la Biblioteca",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Distribución de libros en el sistema",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                PieChart(data = chartData, colors = colors, modifier = Modifier.size(150.dp))
+                PieChart(data = chartData, colors = colors, modifier = Modifier.size(180.dp))
                 ChartLegend(data = chartData, colors = colors)
             }
         }
@@ -87,10 +143,28 @@ private fun LibraryStatusSection(status: LibraryStatus) {
 private fun TopBooksSection(topBooks: List<BookLoanStats>) {
     if (topBooks.isEmpty()) return
 
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Libros Más Populares", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text(
+                "Libros Más Populares",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Top 5 libros más prestados",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
             BarChart(items = topBooks.map { it.book.title to it.loanCount })
         }
     }
@@ -100,10 +174,28 @@ private fun TopBooksSection(topBooks: List<BookLoanStats>) {
 private fun TopUsersSection(topUsers: List<UserLoanStats>) {
     if (topUsers.isEmpty()) return
 
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Usuarios Más Activos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Text(
+                "Usuarios Más Activos",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Top 5 usuarios con más préstamos",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
             BarChart(items = topUsers.map { it.user.name to it.loanCount })
         }
     }
@@ -146,13 +238,57 @@ fun ChartLegend(data: Map<String, Float>, colors: List<Color>) {
 fun BarChart(items: List<Pair<String, Int>>) {
     val maxValue = items.maxOfOrNull { it.second }?.toFloat() ?: 1f
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items.forEach { (label, value) ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = label, modifier = Modifier.weight(0.4f), fontSize = 14.sp, maxLines = 1)
-                Row(modifier = Modifier.weight(0.6f).height(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.fillMaxWidth(fraction = (value / maxValue)).height(20.dp).background(MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small))
-                    Text(text = " $value", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        items.forEachIndexed { index, (label, value) ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = label,
+                        modifier = Modifier.weight(0.4f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .weight(0.6f)
+                            .height(32.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(fraction = (value / maxValue))
+                                .height(32.dp)
+                                .background(
+                                    color = when (index % 3) {
+                                        0 -> MaterialTheme.colorScheme.primary
+                                        1 -> MaterialTheme.colorScheme.secondary
+                                        else -> MaterialTheme.colorScheme.tertiary
+                                    },
+                                    shape = MaterialTheme.shapes.medium
+                                )
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "$value",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }
