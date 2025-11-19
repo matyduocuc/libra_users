@@ -4,6 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -68,10 +72,16 @@ fun BookDetailsDialog(
                 .background(dialogBackgroundColor)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                modifier = Modifier.fillMaxSize()
             ) {
+                // Contenido scrolleable
+                val buttonHeight = 56.dp + 40.dp // Altura del botón + padding
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = buttonHeight) // Espacio para el botón fijo
+                ) {
                 // --- Portada del libro con overlay ---
                 Box(
                     modifier = Modifier
@@ -289,8 +299,26 @@ fun BookDetailsDialog(
                     }
                     
                     Spacer(Modifier.height(32.dp))
-                    
-                    // --- Botón de obtener mejorado ---
+                }
+                }
+            }
+            
+            // Botón fijo en la parte inferior
+            val navigationBarsPadding = WindowInsets.navigationBars.asPaddingValues()
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = navigationBarsPadding.calculateBottomPadding()),
+                color = dialogBackgroundColor,
+                tonalElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(vertical = 20.dp)
+                ) {
                     Button(
                         onClick = { 
                             onAddToCart(book)
@@ -315,8 +343,6 @@ fun BookDetailsDialog(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
-                    Spacer(Modifier.height(24.dp))
                 }
             }
         }
