@@ -59,14 +59,22 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideUserRepository(userDao: UserDao): UserRepository {
-        return UserRepository(userDao)
+    fun provideUserRepository(
+        userDao: UserDao,
+        userApi: com.empresa.libra_users.data.remote.dto.UserApi,
+        userPreferences: UserPreferencesRepository
+    ): UserRepository {
+        return UserRepository(userDao, userApi, userPreferences)
     }
 
     @Provides
     @Singleton
-    fun provideBookRepository(bookDao: BookDao): BookRepository {
-        return BookRepository(bookDao)
+    fun provideBookRepository(
+        bookDao: BookDao,
+        bookApi: com.empresa.libra_users.data.remote.dto.BookApi,
+        userPreferences: UserPreferencesRepository
+    ): BookRepository {
+        return BookRepository(bookDao, bookApi, userPreferences)
     }
 
     @Provides

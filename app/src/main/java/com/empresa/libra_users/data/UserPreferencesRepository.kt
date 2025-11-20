@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -71,5 +72,16 @@ class UserPreferencesRepository @Inject constructor(@ApplicationContext private 
         context.dataStore.edit { preferences ->
             preferences.clear()
         }
+    }
+    
+    // Helper para obtener el token de forma sincrónica (suspend)
+    suspend fun getAuthToken(): String? {
+        return authToken.first()
+    }
+    
+    // Helper para obtener el token con formato Bearer
+    suspend fun getBearerToken(): String? {
+        val token = getAuthToken()
+        return token?.let { "Bearer $it" }
     }
 }
