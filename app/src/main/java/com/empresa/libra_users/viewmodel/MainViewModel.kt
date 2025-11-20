@@ -7,6 +7,7 @@ import com.empresa.libra_users.data.UserPreferencesRepository
 import com.empresa.libra_users.data.local.user.BookEntity
 import com.empresa.libra_users.data.local.user.LoanEntity
 import com.empresa.libra_users.data.local.user.UserEntity
+import com.empresa.libra_users.data.local.database.getInitialBooks
 import com.empresa.libra_users.data.repository.BookRepository
 import com.empresa.libra_users.data.repository.LoanRepository
 import com.empresa.libra_users.data.repository.NotificationRepository
@@ -136,6 +137,35 @@ class MainViewModel @Inject constructor(
     init {
         checkAuthStatus()
         loadCategorizedBooks()
+        // Cargar datos iniciales si la base de datos está vacía
+        // Esto se ejecuta siempre al iniciar la app, para todos los usuarios
+        checkAndLoadInitialData()
+    }
+
+    /**
+     * Carga los libros iniciales (seed data) si la base de datos está vacía.
+     * Se ejecuta al iniciar la app, garantizando que los 9 nuevos libros (IDs 21-29)
+     * se carguen automáticamente la primera vez que se inicia la aplicación.
+     * 
+     * IMPORTANTE: Esta función se ejecuta en MainViewModel.init, que se crea
+     * al iniciar la app, independientemente de si el usuario es admin o regular.
+     * Esto asegura que los datos iniciales estén disponibles para todos los usuarios.
+     */
+    private fun checkAndLoadInitialData() {
+        viewModelScope.launch {
+            try {
+                val count = bookRepository.count()
+                if (count == 0) {
+                    // Cargar todos los libros iniciales, incluyendo los 9 nuevos (IDs 21-29)
+                    val initialBooks = getInitialBooks()
+                    initialBooks.forEach { book ->
+                        bookRepository.insert(book)
+                    }
+                }
+            } catch (e: Exception) {
+                // Error al cargar datos iniciales - silencioso para no interrumpir el flujo
+            }
+        }
     }
 
     private fun checkAuthStatus() {

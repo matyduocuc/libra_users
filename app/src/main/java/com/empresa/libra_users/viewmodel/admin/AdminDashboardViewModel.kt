@@ -77,12 +77,18 @@ class AdminDashboardViewModel @Inject constructor(
         checkAndLoadInitialData()
     }
 
+    /**
+     * NOTA: Esta función es un respaldo, pero la carga principal de datos iniciales
+     * se ejecuta en MainViewModel.init, que se crea al iniciar la app.
+     * Esta función aquí solo se ejecuta si el admin entra antes de que MainViewModel
+     * haya cargado los datos (caso muy raro).
+     */
     private fun checkAndLoadInitialData() {
         viewModelScope.launch {
             try {
                 val count = bookRepository.count()
                 if (count == 0) {
-                    // Cargar libros iniciales
+                    // Cargar libros iniciales (respaldo - normalmente ya se cargaron en MainViewModel)
                     val initialBooks = getInitialBooks()
                     initialBooks.forEach { book ->
                         bookRepository.insert(book)
