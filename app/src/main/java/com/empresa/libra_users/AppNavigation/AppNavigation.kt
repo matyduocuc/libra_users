@@ -12,8 +12,10 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,6 +37,7 @@ object Routes {
     const val MAIN_GRAPH = "main_graph"
     const val LOGIN = "login"
     const val REGISTER = "register"
+    const val LOADING = "loading"
     const val HOME = "home"
     const val CATALOG = "catalog"
     const val NEWS = "news"
@@ -161,9 +164,18 @@ private fun AuthenticatedView(
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = Routes.HOME,
+                        startDestination = Routes.LOADING,
                         modifier = Modifier.padding(innerPadding)
                     ) {
+                        composable(Routes.LOADING) {
+                            LoadingScreen(
+                                onFinish = {
+                                    navController.navigate(Routes.HOME) {
+                                        popUpTo(Routes.LOADING) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable(Routes.HOME) {
                             HomeScreen(vm = vm, onLogout = onLogout)
                         }
@@ -239,19 +251,27 @@ private fun AppNavigationRail(navController: NavHostController, items: List<NavI
 
 @Composable
 private fun UnauthenticatedView(navController: NavHostController, vm: MainViewModel) {
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
-        composable(Routes.LOGIN) {
-            LoginScreen(
-                vm = vm,
-                onGoRegister = { navController.navigate(Routes.REGISTER) }
-            )
-        }
-        composable(Routes.REGISTER) {
-            RegisterScreen(
-                vm = vm,
-                onGoLogin = { navController.popBackStack() },
-                onRegisteredNavigateLogin = { navController.navigate(Routes.LOGIN) { popUpTo(Routes.LOGIN) { inclusive = true } } }
-            )
+    var showSplash by remember { mutableStateOf(true) }
+    
+    if (showSplash) {
+        SplashScreen(
+            onFinish = { showSplash = false }
+        )
+    } else {
+        NavHost(navController = navController, startDestination = Routes.LOGIN) {
+            composable(Routes.LOGIN) {
+                LoginScreen(
+                    vm = vm,
+                    onGoRegister = { navController.navigate(Routes.REGISTER) }
+                )
+            }
+            composable(Routes.REGISTER) {
+                RegisterScreen(
+                    vm = vm,
+                    onGoLogin = { navController.popBackStack() },
+                    onRegisteredNavigateLogin = { navController.navigate(Routes.LOGIN) { popUpTo(Routes.LOGIN) { inclusive = true } } }
+                )
+            }
         }
     }
 }
